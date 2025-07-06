@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27131a62e83cc4ca6afac03e84f04255, type: 3}
+  m_Name: Quest
+  m_EditorClassIdentifier: 
+  quest_id: 
+  title: 
+  description: 
+  required_level: 0
+  reward_xp: 0
+  reward_item: 
+  is_timed: 0
+  time_limit_sec: 0
+  quest_type: 0
+  linked_npc: {fileID: 0}
+  steps: []
