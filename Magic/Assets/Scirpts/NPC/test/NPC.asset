@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f714e3f7f1df54a3786000ff64f2e711, type: 3}
   m_Name: NPC
   m_EditorClassIdentifier: 
-  npc_id: 0
-  npc_name: 
-  role: 
-  location: 
+  npc_id: 1
+  npc_name: Luna
+  role: "\uAC00\uC774\uB4DC"
+  location: 0, 0, 0
   behavior_pattern: 0
-  voiceClip: {fileID: 0}
+  voiceClip: {fileID: 8300000, guid: 16fba6d30ed741d4a9fdd6e79ee2f3ac, type: 3}
