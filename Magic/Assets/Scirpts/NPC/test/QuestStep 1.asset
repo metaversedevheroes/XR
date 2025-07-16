@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 72ca7a0c4c7ba43ad85a00b1727d9193, type: 3}
-  m_Name: QuestStep
+  m_Name: QuestStep 1
   m_EditorClassIdentifier: 
-  step_id: 1
+  step_id: 2
   step_order: 1
   step_type: 0
   target_id: 
-  condition: 1
-  description: "\uB8E8\uB098\uC640 \uB300\uD654\uD558\uAE30"
+  condition: 3
+  description: "\uBB3C\uAC74 \uC8FC\uC6CC\uC624\uAE30"

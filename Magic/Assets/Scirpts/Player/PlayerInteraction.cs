@@ -5,15 +5,15 @@ public class PlayerInteraction : MonoBehaviour
     public float interactRange = 3f;
     public string interactText;
 
-    private IInteractable currentTarget;
+    private IInteractable _currentTarget;
 
     void Update()
     {
         DetectInteractable();
 
-        if (Input.GetKeyDown(KeyCode.E) && currentTarget != null)
+        if (Input.GetKeyDown(KeyCode.E) && _currentTarget != null)
         {
-            currentTarget.Interact();
+            _currentTarget.Interact();
         }
     }
 
@@ -25,14 +25,14 @@ public class PlayerInteraction : MonoBehaviour
             IInteractable interactable = hit.collider.GetComponent<IInteractable>();
             if (interactable != null)
             {
-                currentTarget = interactable;
+                _currentTarget = interactable;
                 //interactText.text = interactable.GetInteractText();
                 //interactText.gameObject.SetActive(true);
                 return;
             }
         }
 
-        currentTarget = null;
+        _currentTarget = null;
         //interactText.gameObject.SetActive(false);
     }
 }

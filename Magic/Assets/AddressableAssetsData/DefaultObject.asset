@@ -9,12 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 72ca7a0c4c7ba43ad85a00b1727d9193, type: 3}
-  m_Name: QuestStep
+  m_Script: {fileID: 11500000, guid: 3a189bb168d8d90478a09ea08c2f3d72, type: 3}
+  m_Name: DefaultObject
   m_EditorClassIdentifier: 
-  step_id: 1
-  step_order: 1
-  step_type: 0
-  target_id: 
-  condition: 1
-  description: "\uB8E8\uB098\uC640 \uB300\uD654\uD558\uAE30"
+  m_AddressableAssetSettingsGuid: d707413a3c0df4d8e9022d007f7f4a35

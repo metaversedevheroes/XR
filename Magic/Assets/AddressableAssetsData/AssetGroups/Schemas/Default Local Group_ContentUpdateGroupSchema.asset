@@ -9,12 +9,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 72ca7a0c4c7ba43ad85a00b1727d9193, type: 3}
-  m_Name: QuestStep
+  m_Script: {fileID: 11500000, guid: 5834b5087d578d24c926ce20cd31e6d6, type: 3}
+  m_Name: Default Local Group_ContentUpdateGroupSchema
   m_EditorClassIdentifier: 
-  step_id: 1
-  step_order: 1
-  step_type: 0
-  target_id: 
-  condition: 1
-  description: "\uB8E8\uB098\uC640 \uB300\uD654\uD558\uAE30"
+  m_Group: {fileID: 11400000, guid: 7daea85991e99410391bba9f49a13ea6, type: 2}
+  m_StaticContent: 0

@@ -5,11 +5,11 @@ public enum Emotion { Idle, Smile, Sad, Angry }
 [System.Serializable]
 public class DialogueData
 {
-    public string dialogue_id;
+    public string dialogueID;
     public int order;
     public string text;
     public Emotion emotion;
     public string condition;
-    public bool has_options;
-    public bool is_end;
+    public bool hasOptions;
+    public bool isEnd;
 }

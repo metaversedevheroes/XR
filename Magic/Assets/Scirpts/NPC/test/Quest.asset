@@ -17,13 +17,13 @@ MonoBehaviour:
   description: "\uD29C\uD1A0\uB9AC\uC5BC \uC785\uB2C8\uB2E4,"
   required_level: 0
   reward_xp: 0
-  reward_item: "\uC5C6\uC5B4\uC6A9"
+  reward_item: "\uC2A4\uD0AC"
   is_timed: 0
   time_limit_sec: 0
   quest_type: 0
   linked_npc: {fileID: 11400000, guid: cf4509281707a40d7b964436f509b74d, type: 2}
   is_step_by_step: 1
   steps:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 11400000, guid: 8de87e04ca0dd47ea9741ad7a5ccad5b, type: 2}
+  - {fileID: 11400000, guid: 312465c1697604ecf836671a52725835, type: 2}
+  - {fileID: 11400000, guid: 1adee45bbe2054da7835a92010e56f0e, type: 2}
