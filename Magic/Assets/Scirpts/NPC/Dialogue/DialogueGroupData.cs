@@ -7,7 +7,8 @@ public class DialogueGroupAsset : ScriptableObject
     public string dialogueGroupID;
     public string dialogueGroupName;
     public NPCData npc;
-    public QuestData quest;
+    public QuestGroupData quest;
+    public QuestStepData questStep;
 
     public List<DialogueData> dialogues;
 }
