@@ -1,53 +1,64 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 
-public class UIanimator : MonoBehaviour
+public class UIAnimator : MonoBehaviour
 {
-    public float delayBetween = 0.15f;
-    public float animationDuration = 0.3f;
-    public float moveDistance = 100f;
+    public float delay = 0.05f;
+    public float fadeDuration = 0.2f;
+    public Vector2 startOffset = new Vector2(0f, -100f); // 아래에서 위로
 
     public void Play()
     {
-        StartCoroutine(PlaySequentialAnimations());
+        StopAllCoroutines();
+        StartCoroutine(PlayAnimation());
     }
 
-    IEnumerator PlaySequentialAnimations()
+    private IEnumerator PlayAnimation()
     {
-        for (int i = 0; i < transform.childCount; i++)
+        // 자식 오브젝트 순서대로 실행
+        foreach (Transform child in transform)
         {
-            Transform child = transform.GetChild(i);
-            RectTransform rect = child.GetComponent<RectTransform>();
-            if (rect == null) continue;
+            GameObject go = child.gameObject;
 
-            CanvasGroup cg = child.GetComponent<CanvasGroup>() ?? child.gameObject.AddComponent<CanvasGroup>();
+            // 활성화
+            go.SetActive(true);
 
-            Vector2 startPos = rect.anchoredPosition - new Vector2(0, moveDistance);
-            Vector2 endPos = rect.anchoredPosition;
+            // CanvasGroup 설정
+            CanvasGroup cg = go.GetComponent<CanvasGroup>();
+            if (cg == null)
+                cg = go.AddComponent<CanvasGroup>();
 
+            cg.alpha = 0f;
+
+            // RectTransform 설정
+            RectTransform rect = go.GetComponent<RectTransform>();
+            if (rect == null)
+                continue;
+
+            Vector2 originalPos = rect.anchoredPosition;
+            Vector2 startPos = originalPos + startOffset;
             rect.anchoredPosition = startPos;
-            cg.alpha = 0;
 
-            StartCoroutine(AnimateSingle(rect, cg, endPos));
-            yield return new WaitForSeconds(delayBetween);
+            float t = 0f;
+
+            while (t < fadeDuration)
+            {
+                t += Time.deltaTime;
+                float progress = Mathf.Clamp01(t / fadeDuration);
+
+                // 위치 보간
+                rect.anchoredPosition = Vector2.Lerp(startPos, originalPos, progress);
+                cg.alpha = progress;
+
+                yield return null;
+            }
+
+            // 위치 정확히 보정
+            rect.anchoredPosition = originalPos;
+            cg.alpha = 1f;
+
+            yield return new WaitForSeconds(delay);
         }
-    }
-
-    IEnumerator AnimateSingle(RectTransform rt, CanvasGroup cg, Vector2 endPos)
-    {
-        float elapsed = 0f;
-        Vector2 startPos = rt.anchoredPosition;
-
-        while (elapsed < animationDuration)
-        {
-            float t = elapsed / animationDuration;
-            rt.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
-            cg.alpha = t;
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-
-        rt.anchoredPosition = endPos;
-        cg.alpha = 1f;
     }
 }
