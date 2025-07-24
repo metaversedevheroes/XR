@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class UIanimator : MonoBehaviour
@@ -8,68 +7,47 @@ public class UIanimator : MonoBehaviour
     public float animationDuration = 0.3f;
     public float moveDistance = 100f;
 
-    private class UIElement
+    public void Play()
     {
-        public RectTransform rectTransform;
-        public Vector2 originalPos;
-        public CanvasGroup canvasGroup;
-    }
-
-    private List<UIElement> uiElements = new List<UIElement>();
-
-    void Start()
-    {
-        // 자식 오브젝트들 자동 탐색
-        foreach (Transform child in transform)
-        {
-            var rect = child.GetComponent<RectTransform>();
-            if (rect == null) continue;
-
-            var cg = child.GetComponent<CanvasGroup>();
-            if (cg == null) cg = child.gameObject.AddComponent<CanvasGroup>();
-
-            var element = new UIElement
-            {
-                rectTransform = rect,
-                originalPos = rect.anchoredPosition,
-                canvasGroup = cg
-            };
-
-            // 초기 상태 설정
-            rect.anchoredPosition = element.originalPos - new Vector2(0, moveDistance);
-            cg.alpha = 0;
-
-            uiElements.Add(element);
-        }
-
         StartCoroutine(PlaySequentialAnimations());
     }
 
     IEnumerator PlaySequentialAnimations()
     {
-        foreach (var ui in uiElements)
+        for (int i = 0; i < transform.childCount; i++)
         {
-            StartCoroutine(AnimateSingleUI(ui));
+            Transform child = transform.GetChild(i);
+            RectTransform rect = child.GetComponent<RectTransform>();
+            if (rect == null) continue;
+
+            CanvasGroup cg = child.GetComponent<CanvasGroup>() ?? child.gameObject.AddComponent<CanvasGroup>();
+
+            Vector2 startPos = rect.anchoredPosition - new Vector2(0, moveDistance);
+            Vector2 endPos = rect.anchoredPosition;
+
+            rect.anchoredPosition = startPos;
+            cg.alpha = 0;
+
+            StartCoroutine(AnimateSingle(rect, cg, endPos));
             yield return new WaitForSeconds(delayBetween);
         }
     }
 
-    IEnumerator AnimateSingleUI(UIElement ui)
+    IEnumerator AnimateSingle(RectTransform rt, CanvasGroup cg, Vector2 endPos)
     {
         float elapsed = 0f;
-        Vector2 startPos = ui.originalPos - new Vector2(0, moveDistance);
-        Vector2 endPos = ui.originalPos;
+        Vector2 startPos = rt.anchoredPosition;
 
         while (elapsed < animationDuration)
         {
             float t = elapsed / animationDuration;
-            ui.rectTransform.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
-            ui.canvasGroup.alpha = t;
+            rt.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
+            cg.alpha = t;
             elapsed += Time.deltaTime;
             yield return null;
         }
 
-        ui.rectTransform.anchoredPosition = endPos;
-        ui.canvasGroup.alpha = 1f;
+        rt.anchoredPosition = endPos;
+        cg.alpha = 1f;
     }
 }
