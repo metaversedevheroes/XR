@@ -8,7 +8,9 @@ public class QuestSystem : MonoBehaviour
     private Dictionary<string, QuestGroupManager> activeQuests = new();
 
     [Header("초기 퀘스트 그룹들")]
+    //이걸 이렇게 담는 건 ㅇㅈ , 이걸 큐로 바꿔야 하나??
     public List<QuestGroupData> initialQuests;
+    // 아님 이거랑 별개로 활성화된 퀘스트만을 관리하는 걸 따로 가지고 있어야 하나??
 
     private void Awake()
     {
@@ -37,8 +39,14 @@ public class QuestSystem : MonoBehaviour
         {
             var groupManager = new QuestGroupManager(questData);
             activeQuests.Add(questData.questID, groupManager);
-            Debug.Log($"[퀘스트 시작] {questData.title}");
+            Debug.Log($"[퀘스트 등록] {questData.title}");
         }
+    }
+
+    public void InProgress()
+    {
+        // 등록된 퀘스트 중 현재 진행 중인 퀘스트를 따로 관리/ 큐에 담거나 순차적으로 딱딱 나올 수 있게 하기??
+        Debug.Log($"[퀘스트 진행] 뭐하는지 나중에 변수로 입력");
     }
 
     public void RegisterInteraction(string questID, string stepID)

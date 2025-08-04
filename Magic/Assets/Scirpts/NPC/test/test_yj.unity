@@ -782,7 +782,7 @@ GameObject:
   - component: {fileID: 594973894}
   - component: {fileID: 594973893}
   m_Layer: 0
-  m_Name: Sphere
+  m_Name: coin
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -800,7 +800,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd029aee6fe79435885b77d443967e8e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  targetData: {fileID: 0}
+  targetData: {fileID: 11400000, guid: 81802e55e58e548838f2f7ba35a123dc, type: 2}
 --- !u!135 &594973894
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -1344,6 +1344,7 @@ MonoBehaviour:
   dialogueUI: {fileID: 806755223}
   dialogueText: {fileID: 1757176813}
   nextButton: {fileID: 857167096}
+  dialogueMappings: []
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

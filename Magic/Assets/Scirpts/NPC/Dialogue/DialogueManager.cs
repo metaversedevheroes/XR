@@ -13,6 +13,9 @@ public class DialogueManager : MonoBehaviour
     public Button nextButton;
 
     private Queue<DialogueData> dialogueQueue;
+    
+    public List<DialogueData> dialogueMappings;
+    private Dictionary<string, DialogueData> dialogueDict;
 
     void Awake()
     {
@@ -23,6 +26,13 @@ public class DialogueManager : MonoBehaviour
             Destroy(gameObject);
 
         dialogueQueue = new Queue<DialogueData>();
+        dialogueDict = new Dictionary<string, DialogueData>();
+
+        foreach (var mapping in dialogueMappings)
+        {
+            if (!dialogueDict.ContainsKey(mapping.dialogueID))
+                dialogueDict.Add(mapping.dialogueID, mapping);
+        }
     }
 
     /// <summary>

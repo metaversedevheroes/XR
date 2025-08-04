@@ -1,16 +1,27 @@
 using UnityEngine;
-
+using System.Collections.Generic;
+using System.Transactions;
 public class DialogueTrigger : MonoBehaviour, IInteractable
 {
     public DialogueGroupAsset dialogueGroup;
 
-    public void Interact() // 플레이어가 e 키 누르면 실행될 함수
+    public string GetInteractText() => "대화하기 (E)";
+
+    public void Interact()
     {
         DialogueManager.Instance.StartDialogueGroup(dialogueGroup);
     }
 
-    public string GetInteractText() // 화면에 뜰 UI 문구
+    public List<InteractionOption> GetAvailableInteractions()
     {
-        return "대화하기 (E)";
+        return new List<InteractionOption>
+        {
+            // new InteractionOption
+            // {
+            //     actionID = "talk",
+            //     displayText = "대화하기",
+            //     key = KeyCode.E
+            // }
+        };
     }
 }
