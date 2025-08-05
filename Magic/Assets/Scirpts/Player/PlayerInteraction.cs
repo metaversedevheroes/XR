@@ -1,51 +1,66 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using System.Collections.Generic;
 
 public class PlayerInteraction : MonoBehaviour
 {
-    public float interactRange = 3f;
+    public Camera mainCamera;
+    public float maxDistance = 5f;
 
-    private IInteractable _currentTarget;
+    private PlayerInputActions inputActions;
 
-    void Update()
+    private void Awake()
     {
-        DetectInteractable();
+        if (mainCamera == null)
+            mainCamera = Camera.main;
 
-        if (Input.GetKeyDown(KeyCode.E) && _currentTarget != null)
-        {
-            List<InteractionOption> options = _currentTarget.GetAvailableInteractions();
-
-            if (options == null || options.Count == 0)
-            {
-                _currentTarget.Interact(); // 기본 상호작용
-            }
-            else if (options.Count == 1)
-            {
-                // 어떤 대상에 할 지 띄우기
-                options[0].Execute(gameObject, gameObject); // 유일한 선택 자동 실행 
-            }
-            else
-            {
-                // UI로 선택지 보여주기 추후 연결
-                //InteractionUI.Instance.ShowOptions(options, _currentTarget);
-            }
-        }
+        inputActions = new PlayerInputActions();
     }
 
-    void DetectInteractable()
+    private void OnEnable()
     {
-        Ray ray = new Ray(transform.position, transform.forward);
+        inputActions.Player.Enable();
+        inputActions.Player.Click.performed += OnClickPerformed;
+    }
 
-        if (Physics.Raycast(ray, out RaycastHit hit, interactRange))
+    private void OnDisable()
+    {
+        inputActions.Player.Click.performed -= OnClickPerformed;
+        inputActions.Player.Disable();
+    }
+
+    private void OnClickPerformed(InputAction.CallbackContext context)
+    {
+        Ray ray = mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
+
+        if (Physics.Raycast(ray, out RaycastHit hit, maxDistance))
         {
             IInteractable interactable = hit.collider.GetComponent<IInteractable>();
             if (interactable != null)
             {
-                _currentTarget = interactable;
-                return;
+                HandleInteraction(interactable, hit.collider.gameObject);
             }
         }
+    }
 
-        _currentTarget = null;
+    private void HandleInteraction(IInteractable interactable, GameObject target)
+    {
+        List<InteractionOption> options = interactable.GetAvailableInteractions();
+
+        if (options == null || options.Count == 0)
+        {
+            Debug.Log("기본 상호작용 실행");
+            interactable.Interact();
+        }
+        else if (options.Count == 1)
+        {
+            Debug.Log("단일 옵션 자동 실행");
+            options[0].Execute(gameObject, target);
+        }
+        else
+        {
+            Debug.Log("여러 옵션 있음 - UI로 선택 필요");
+            // InteractionUI.Instance.ShowOptions(options, interactable);
+        }
     }
 }
