@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using System.Collections;
 using System.Collections.Generic;
 using System;
@@ -56,7 +57,7 @@ public class SpeechCombatSystem : MonoBehaviour
     {
         if (voiceManager == null)
         {
-            voiceManager = FindObjectOfType<VoiceRecognitionManager>();
+            voiceManager = FindFirstObjectByType<VoiceRecognitionManager>();
         }
     }
     
@@ -149,7 +150,8 @@ public class SpeechCombatSystem : MonoBehaviour
             else
             {
                 // Fallback: Check for keyboard input for testing
-                yield return StartCoroutine(CheckForKeyboardInput());
+                StartCoroutine(CheckForKeyboardInput());
+                yield return new WaitForSeconds(0.1f);
             }
             
             yield return new WaitForSeconds(0.1f);
@@ -177,30 +179,41 @@ public class SpeechCombatSystem : MonoBehaviour
     
     private IEnumerator CheckForKeyboardInput()
     {
-        // Fallback system for testing with keyboard
-        if (Input.inputString.Length > 0)
+        // Fallback system for testing with keyboard using new Input System
+        var keyboard = Keyboard.current;
+        if (keyboard != null)
         {
-            foreach (char c in Input.inputString)
+            // Handle Enter key
+            if (keyboard.enterKey.wasPressedThisFrame)
             {
-                if (c == '\b') // Backspace
+                if (!string.IsNullOrEmpty(lastRecognizedText))
                 {
-                    if (lastRecognizedText.Length > 0)
-                    {
-                        lastRecognizedText = lastRecognizedText.Substring(0, lastRecognizedText.Length - 1);
-                    }
+                    ProcessSpeechInput(lastRecognizedText);
+                    lastRecognizedText = "";
                 }
-                else if (c == '\n' || c == '\r') // Enter
+            }
+            
+            // Handle Backspace
+            if (keyboard.backspaceKey.wasPressedThisFrame)
+            {
+                if (lastRecognizedText.Length > 0)
                 {
-                    if (!string.IsNullOrEmpty(lastRecognizedText))
-                    {
-                        ProcessSpeechInput(lastRecognizedText);
-                        lastRecognizedText = "";
-                    }
+                    lastRecognizedText = lastRecognizedText.Substring(0, lastRecognizedText.Length - 1);
                 }
-                else if (char.IsLetterOrDigit(c) || char.IsWhiteSpace(c) || char.IsPunctuation(c))
-                {
-                    lastRecognizedText += c;
-                }
+            }
+            
+            // For testing purposes, use predefined test sentences
+            if (keyboard.digit1Key.wasPressedThisFrame)
+            {
+                lastRecognizedText = "I am learning English";
+            }
+            else if (keyboard.digit2Key.wasPressedThisFrame)
+            {
+                lastRecognizedText = "The dragon is attacking";
+            }
+            else if (keyboard.digit3Key.wasPressedThisFrame)
+            {
+                lastRecognizedText = "We need to fight together";
             }
         }
         

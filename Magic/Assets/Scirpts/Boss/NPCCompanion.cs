@@ -33,7 +33,9 @@ public class NPCCompanion : MonoBehaviour
     [Header("Attack Patterns")]
     [SerializeField] private float swordAttackChance = 0.4f;
     [SerializeField] private float magicAttackChance = 0.3f;
-    [SerializeField] private float supportSkillChance = 0.3f;
+#pragma warning disable CS0414
+    [SerializeField] private float supportSkillChance = 0.3f; // TODO: Implement support skill probability logic
+#pragma warning restore CS0414
     
     [Header("Visual Effects")]
     [SerializeField] private GameObject swordAttackEffect;
@@ -395,7 +397,7 @@ public class NPCCompanion : MonoBehaviour
         if (animator != null)
         {
             animator.SetTrigger("Attack");
-            animator.SetString("AttackType", attackType);
+            animator.SetInteger("AttackType", attackType.GetHashCode());
         }
     }
     

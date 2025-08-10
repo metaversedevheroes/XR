@@ -206,7 +206,7 @@ public class BossMonster : MonoBehaviour
         
         SetState(BossState.Attacking);
         
-        int attackType = Random.Range(0, 2);
+        int attackType = UnityEngine.Random.Range(0, 2);
         
         switch (attackType)
         {
@@ -360,7 +360,7 @@ public class BossMonster : MonoBehaviour
         if (animator != null)
         {
             animator.SetTrigger("Attack");
-            animator.SetString("AttackType", attackType);
+            animator.SetInteger("AttackType", attackType.GetHashCode());
         }
     }
     

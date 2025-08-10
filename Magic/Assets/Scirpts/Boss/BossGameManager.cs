@@ -35,7 +35,9 @@ public class BossGameManager : MonoBehaviour
     [SerializeField] private BossGameState gameState = new BossGameState();
     [SerializeField] private bool debugMode = true;
     [SerializeField] private float sentenceTimeLimit = 15f;
-    [SerializeField] private int damagePerCorrectAnswer = 25;
+#pragma warning disable CS0414
+    [SerializeField] private int damagePerCorrectAnswer = 25; // TODO: Implement damage calculation based on correct answers
+#pragma warning restore CS0414
     [SerializeField] private int bossDamageToPlayer = 20;
     [SerializeField] private int comboMultiplier = 2;
     
@@ -95,14 +97,14 @@ public class BossGameManager : MonoBehaviour
     {
         if (speechCombatSystem != null)
         {
-            speechCombatSystem.OnCorrectAnswer += HandleCorrectAnswer;
-            speechCombatSystem.OnIncorrectAnswer += HandleIncorrectAnswer;
-            speechCombatSystem.OnTimeExpired += HandleTimeExpired;
+            SpeechCombatSystem.OnCorrectAnswer += HandleCorrectAnswer;
+            SpeechCombatSystem.OnIncorrectAnswer += HandleIncorrectAnswer;
+            SpeechCombatSystem.OnTimeExpired += HandleTimeExpired;
         }
         
         if (playerHealthSystem != null)
         {
-            playerHealthSystem.OnPlayerDeath += HandlePlayerDeath;
+            PlayerHealthSystem.OnPlayerDeath += HandlePlayerDeath;
         }
     }
     
@@ -407,14 +409,14 @@ public class BossGameManager : MonoBehaviour
     {
         if (speechCombatSystem != null)
         {
-            speechCombatSystem.OnCorrectAnswer -= HandleCorrectAnswer;
-            speechCombatSystem.OnIncorrectAnswer -= HandleIncorrectAnswer;
-            speechCombatSystem.OnTimeExpired -= HandleTimeExpired;
+            SpeechCombatSystem.OnCorrectAnswer -= HandleCorrectAnswer;
+            SpeechCombatSystem.OnIncorrectAnswer -= HandleIncorrectAnswer;
+            SpeechCombatSystem.OnTimeExpired -= HandleTimeExpired;
         }
         
         if (playerHealthSystem != null)
         {
-            playerHealthSystem.OnPlayerDeath -= HandlePlayerDeath;
+            PlayerHealthSystem.OnPlayerDeath -= HandlePlayerDeath;
         }
         
         if (Instance == this)

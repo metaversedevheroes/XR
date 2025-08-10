@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(dotnet build:*)",
+      "Bash(del \"WordGuessingGameManager.cs\" \"WordGuessingGameManager.cs.meta\")",
+      "Bash(del:*)",
+      "Bash(rm:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(mkdir:*)"
+    ],
+    "deny": []
+  }
+}

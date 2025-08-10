@@ -28,9 +28,11 @@ public class FeedbackStoneInteraction : MonoBehaviour
     [SerializeField] private AudioClip deniedSound;
     
     [Header("Room Feedback")]
-    [SerializeField] private RoomFeedbackController roomFeedback;
-    [SerializeField] private bool autoFindRoomFeedback = true;
+    [SerializeField] private Light[] roomLights;
+    [SerializeField] private bool autoFindRoomLights = true;
     [SerializeField] private float feedbackDuration = 2f;
+    [SerializeField] private Color positiveColor = Color.green;
+    [SerializeField] private Color negativeColor = Color.red;
     
     [Header("Animation")]
     [SerializeField] private Animator stoneAnimator;
@@ -68,14 +70,12 @@ public class FeedbackStoneInteraction : MonoBehaviour
     
     private void OnEnable()
     {
-        PlayerRoleManager.OnPlayerPermissionsChanged += HandlePlayerPermissionsChanged;
-        WordGuessingGameManager.OnGamePhaseChanged += HandleGamePhaseChanged;
+        // Remove multiplayer event listeners - Luna handles everything automatically
     }
     
     private void OnDisable()
     {
-        PlayerRoleManager.OnPlayerPermissionsChanged -= HandlePlayerPermissionsChanged;
-        WordGuessingGameManager.OnGamePhaseChanged -= HandleGamePhaseChanged;
+        // Remove multiplayer event listeners - Luna handles everything automatically  
     }
     
     private void InitializeComponents()
@@ -89,8 +89,8 @@ public class FeedbackStoneInteraction : MonoBehaviour
         if (stoneAnimator == null)
             stoneAnimator = GetComponent<Animator>();
         
-        if (autoFindRoomFeedback && roomFeedback == null)
-            roomFeedback = FindFirstObjectByType<RoomFeedbackController>();
+        if (autoFindRoomLights && (roomLights == null || roomLights.Length == 0))
+            roomLights = FindObjectsByType<Light>(FindObjectsSortMode.None);
         
         if (stoneLight == null)
             stoneLight = GetComponentInChildren<Light>();
@@ -146,9 +146,10 @@ public class FeedbackStoneInteraction : MonoBehaviour
     {
         if (isOnCooldown) return false;
         
-        if (requireRolePermission && PlayerRoleManager.Instance != null)
+        // In single-player mode with Luna, always allow stone interaction
+        if (requireRolePermission)
         {
-            return PlayerRoleManager.Instance.CanPlayerUseStones(assignedPlayerId);
+            return true; // Luna AI handles stone pressing automatically
         }
         
         return true;
@@ -268,15 +269,43 @@ public class FeedbackStoneInteraction : MonoBehaviour
     
     private void TriggerRoomFeedback()
     {
-        if (roomFeedback != null)
+        if (roomLights != null && roomLights.Length > 0)
         {
-            if (stoneType == StoneType.Blue)
+            Color feedbackColor = stoneType == StoneType.Blue ? positiveColor : negativeColor;
+            StartCoroutine(ShowRoomFeedback(feedbackColor));
+        }
+    }
+    
+    private IEnumerator ShowRoomFeedback(Color feedbackColor)
+    {
+        // Store original colors
+        Color[] originalColors = new Color[roomLights.Length];
+        bool[] originalEnabled = new bool[roomLights.Length];
+        
+        for (int i = 0; i < roomLights.Length; i++)
+        {
+            if (roomLights[i] != null)
             {
-                roomFeedback.ShowPositiveFeedback(feedbackDuration);
+                originalColors[i] = roomLights[i].color;
+                originalEnabled[i] = roomLights[i].enabled;
+                
+                // Set feedback color
+                roomLights[i].color = feedbackColor;
+                roomLights[i].enabled = true;
+                roomLights[i].intensity = 2f; // Boost intensity for feedback
             }
-            else
+        }
+        
+        yield return new WaitForSeconds(feedbackDuration);
+        
+        // Restore original colors
+        for (int i = 0; i < roomLights.Length; i++)
+        {
+            if (roomLights[i] != null)
             {
-                roomFeedback.ShowNegativeFeedback(feedbackDuration);
+                roomLights[i].color = originalColors[i];
+                roomLights[i].enabled = originalEnabled[i];
+                roomLights[i].intensity = 1f; // Reset intensity
             }
         }
     }
@@ -289,13 +318,14 @@ public class FeedbackStoneInteraction : MonoBehaviour
         // You could create a feedback event system here
         // For example: OnFeedbackGiven?.Invoke(assignedPlayerId, isPositive);
         
-        if (WordGuessingGameManager.Instance != null)
+        var gameManager = FindFirstObjectByType<SinglePlayerWordGuessingManager>();
+        if (gameManager != null)
         {
             // Set game phase to feedback if appropriate
-            var currentPhase = WordGuessingGameManager.Instance.GetCurrentPhase();
-            if (currentPhase == WordGuessingGameManager.GamePhase.QuestionPhase)
+            var currentPhase = gameManager.GetCurrentPhase();
+            if (currentPhase == SinglePlayerWordGuessingManager.GamePhase.QuestionPhase)
             {
-                WordGuessingGameManager.Instance.SetGamePhase(WordGuessingGameManager.GamePhase.FeedbackPhase);
+                gameManager.SetGamePhase(SinglePlayerWordGuessingManager.GamePhase.FeedbackPhase);
             }
         }
     }
@@ -391,27 +421,7 @@ public class FeedbackStoneInteraction : MonoBehaviour
         }
     }
     
-    private void HandlePlayerPermissionsChanged(int playerId, bool isConnected)
-    {
-        if (playerId == assignedPlayerId)
-        {
-            UpdateInteractionState();
-        }
-    }
-    
-    private void HandleGamePhaseChanged(WordGuessingGameManager.GamePhase newPhase)
-    {
-        // Reset stones at certain phases
-        if (newPhase == WordGuessingGameManager.GamePhase.RoundStart ||
-            newPhase == WordGuessingGameManager.GamePhase.RoundEnd)
-        {
-            if (isActivated)
-            {
-                DeactivateStone();
-            }
-            isOnCooldown = false;
-        }
-    }
+    // Removed multiplayer event handlers - not needed in single-player Luna mode
     
     public void SetStoneType(StoneType type)
     {
@@ -434,13 +444,13 @@ public class FeedbackStoneInteraction : MonoBehaviour
         }
     }
     
-    public void SetRoomFeedbackController(RoomFeedbackController controller)
+    public void SetRoomLights(Light[] lights)
     {
-        roomFeedback = controller;
+        roomLights = lights;
         
         if (debugMode)
         {
-            Debug.Log($"Room feedback controller set for {stoneType} Stone");
+            Debug.Log($"Room lights set for {stoneType} Stone - {lights.Length} lights");
         }
     }
     
@@ -470,6 +480,40 @@ public class FeedbackStoneInteraction : MonoBehaviour
         if (!requireGrab)
         {
             AttemptActivation();
+        }
+    }
+    
+    // Method for Luna NPC to simulate stone press
+    public void SimulatePress()
+    {
+        if (debugMode)
+        {
+            Debug.Log($"[Luna] Simulating {stoneType} stone press");
+        }
+        
+        // Bypass permission checks for AI
+        if (isActivated || isOnCooldown) return;
+        
+        isActivated = true;
+        isOnCooldown = true;
+        lastActivationTime = Time.time;
+        
+        // Play effects
+        PlayActivationEffects();
+        
+        // Trigger room feedback
+        TriggerRoomFeedback();
+        
+        // Send feedback to game system
+        SendFeedbackToGame();
+        
+        // Auto-deactivate after duration
+        StartCoroutine(DeactivateAfterDuration());
+        
+        if (debugMode)
+        {
+            Debug.Log($"[Luna] {stoneType} Stone simulated by AI - " +
+                     $"Feedback: {(stoneType == StoneType.Blue ? "YES" : "NO")}");
         }
     }
 }

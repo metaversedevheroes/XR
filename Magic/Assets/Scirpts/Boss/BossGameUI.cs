@@ -84,9 +84,9 @@ public class BossGameUI : MonoBehaviour
     
     private void FindSystemReferences()
     {
-        gameManager = FindObjectOfType<BossGameManager>();
-        speechSystem = FindObjectOfType<SpeechCombatSystem>();
-        playerHealth = FindObjectOfType<PlayerHealthSystem>();
+        gameManager = FindFirstObjectByType<BossGameManager>();
+        speechSystem = FindFirstObjectByType<SpeechCombatSystem>();
+        playerHealth = FindFirstObjectByType<PlayerHealthSystem>();
         
         if (debugMode)
         {
