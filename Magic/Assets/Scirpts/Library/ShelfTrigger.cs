@@ -1,21 +1,32 @@
 using UnityEngine;
 
-public class ShelfTrigger : MonoBehaviour {
-    public ShelfTarget shelfType;   // 이 선반이 어떤 종류인지 (예: Red, Animal 등)
+[RequireComponent(typeof(Collider))]
+public class ShelfTrigger : MonoBehaviour
+{
+    public ShelfTarget shelfType;       // 이 선반의 타입
+    public Transform uiAnchor;          // UI가 따라붙을 위치(없으면 this)
+    public bool onlyWhenBook = false;   // 책에만 반응할지
+    public LayerMask triggerLayers = ~0;// 반응할 레이어(손/헤드/책 등)
 
-    private void OnTriggerEnter(Collider other) {
-        BookItem book = other.GetComponent<BookItem>();
+    void Reset() {
+        var col = GetComponent<Collider>();
+        if (col) col.isTrigger = true;
+    }
 
-        if (book != null) {
-            if (book.correctShelf == shelfType) {
-                Debug.Log($"Correct! Book ({book.category}) matched shelf: {shelfType}");
+    bool Allowed(Collider other) {
+        if (onlyWhenBook && other.GetComponentInParent<BookItem>() == null) return false;
+        return (triggerLayers.value & (1 << other.gameObject.layer)) != 0;
+    }
 
-                // TODO: 정답 처리 로직 (예: 점수 증가, 이펙트, 다음 단계 해금 등)
-            } else {
-                Debug.Log($"Wrong shelf! Expected: {book.correctShelf}, but was: {shelfType}");
+    void OnTriggerEnter(Collider other) {
+        if (!Allowed(other)) return;
+        var mgr = ShelfHintManager.Instance;
+        if (mgr) mgr.RequestShow(this, uiAnchor ? uiAnchor : transform, shelfType);
+    }
 
-                // TODO: 오답 처리 (진동, 사운드, 책 튕겨내기 등)
-            }
-        }
+    void OnTriggerExit(Collider other) {
+        if (!Allowed(other)) return;
+        var mgr = ShelfHintManager.Instance;
+        if (mgr) mgr.RequestHide(this);
     }
 }
