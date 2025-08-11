@@ -107,6 +107,7 @@ public class DragonAnimationDirector : MonoBehaviour
     // === 트리거로부터 콜백 받는 함수 (Forwarder가 호출) ===
     public void OnAggroTriggerEnter(Collider other)
     {
+        Debug.Log("OnAggroTriggerEnter불렸음1");
         if (!alive || engaged) return;
         StartAggro();
     }
@@ -114,6 +115,7 @@ public class DragonAnimationDirector : MonoBehaviour
     // === 외부/트리거에서 호출 ===
     public void StartAggro()
     {
+        Debug.Log("StartAggro이번엔 얘가 보임 2");
         if (engaged || !alive) return;
         engaged = true;
 
@@ -148,8 +150,10 @@ public class DragonAnimationDirector : MonoBehaviour
     // === 메인 전투 루프(예시 시나리오) ===
     IEnumerator EncounterLoop()
     {
+        Debug.Log("3번출발");
         while (alive)
         {
+            Debug.Log("4번시작");
             // 지상 대기
             yield return WaitSeconds(Random.Range(idleGroundDelay.x, idleGroundDelay.y));
 
@@ -267,6 +271,7 @@ public class DragonTriggerForwarder : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
+        //Debug.Log("자봐라잉지금용준비시작~!");
         if (director && director.enabled && other.CompareTag(playerTag))
             director.OnAggroTriggerEnter(other);
     }
