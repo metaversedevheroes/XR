@@ -2,16 +2,17 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
+// 추후 보완 필요
 public class QuestSystem : MonoBehaviour
 {
     public static QuestSystem Instance { get; private set; }
 
-    // ① 순차 진행할 퀘스트 그룹들을 큐로 보관
+    // 순차 진행할 퀘스트 그룹들을 큐로 보관
     [Header("초기 퀘스트 그룹들")]
     public List<QuestGroupData> initialQuestsList;
     private Queue<QuestGroupData> initialQuestsQueue;
 
-    // ② 현재 활성화된 퀘스트 매니저들
+    // 현재 활성화된 퀘스트 매니저들
     private Dictionary<string, QuestGroupManager> activeQuests = new();
 
     void Awake()
@@ -32,7 +33,7 @@ public class QuestSystem : MonoBehaviour
 
     /// <summary>
     /// 큐에서 다음 퀘스트를 꺼내 등록하고,
-    /// 완료되면 자동으로 다음 퀘스트를 시작하도록 연결합니다.
+    /// 완료되면 자동으로 다음 퀘스트를 시작하도록 연결합니다. // 추후 이거 보완 필요
     /// </summary>
     public void StartNextQuest()
     {
@@ -53,11 +54,7 @@ public class QuestSystem : MonoBehaviour
         // 퀘스트가 완료되면 자동으로 다음 퀘스트 시작
         gm.OnQuestCompleted += StartNextQuest;
     }
-
-    // ——————————————
-    // 조회 API
-    // ——————————————
-
+    
     /// <summary>
     /// 모든 활성화된 QuestGroupManager를 반환
     /// </summary>

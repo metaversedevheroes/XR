@@ -9,12 +9,12 @@ public class BookInteraction : MonoBehaviour, IInteractable
     public string GetInteractText()
     {
         var name = GetComponent<TargetIdentity>().targetData.outterName;
-        return $"Open the {name} book.";
+        return $"Open the {name} book."; 
+        // 나 빌리지에서 작업 한다. ㅇㅇ 
     }
 
     public void Interact()
     {
         Debug.Log("여기 원하는 상호작용 구현"); 
-        // 도빈이일 경우 여기에 ui 랑 연결해서 이미지 뜨는 거 그런 거 구현 하면 됨
     }
 }

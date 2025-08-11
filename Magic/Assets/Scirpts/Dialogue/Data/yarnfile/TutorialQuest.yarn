@@ -1,0 +1,40 @@
+﻿title: firsttalktoluna
+---
+Welcome to magic.
+talk to Luna.
+
+<<if $questStep == 1 and $stepPhase == "Pre">>
+yujin: success!
+    <<jump offer_dialogue>>
+<<endif>>
+
+Luna: Hello, I am Luna. Let's start.
+
+-> Yes, thank you.
+    Luna: Great. Let's begin.
+    <<StartQuestStep "tutorial" "step1">>
+    <<jump end_line>>
+-> No, thank you.
+    Luna: Okay, come back when you're ready.
+    <<jump end_line>>
+
+=== 
+title: end_line
+---
+Luna: Gob bless you.
+<<stop>>
+===
+
+title: offer_dialogue
+---
+NPC: 어서 와! 나는 루나야. 이 마을을 지키려면 네 도움이 필요해.
+
+-> 퀘스트를 수락한다.
+    <<StartQuestStep "tutorial" "step1">>
+    NPC: 좋아! 우선 나와 대화부터 하자.
+    <<stop>>
+
+-> 아직 준비가 안 됐다.
+    NPC: 알겠어. 준비되면 다시 와 줘.
+    <<stop>>
+===

@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0042db593f8da4746b3916ae98737c5c, type: 3}
+  m_Script: {fileID: 11500000, guid: 395b9394a1cfc402c9a44db4c46ba601, type: 3}
   m_Name: IncrementAction_1
   m_EditorClassIdentifier: 
   amount: 1
