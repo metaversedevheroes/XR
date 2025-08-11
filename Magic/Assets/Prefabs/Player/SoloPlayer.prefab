@@ -2536,7 +2536,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Library
+  m_text: '
 
 '
   m_isRightToLeft: 0
@@ -6156,8 +6156,8 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4055097624604664567}
-  m_LocalRotation: {x: -0, y: -0.5877856, z: -0, w: 0.80901676}
-  m_LocalPosition: {x: 0, y: 0, z: -0.000001013279}
+  m_LocalRotation: {x: -0, y: -0.5877853, z: -0, w: 0.809017}
+  m_LocalPosition: {x: 0, y: 0, z: 0.000000029802322}
   m_LocalScale: {x: 0.001, y: 0.001, z: 0.001}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -6166,7 +6166,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.12002191, y: 0.14402705}
+  m_AnchoredPosition: {x: -0.12002308, y: 0.14402775}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!223 &6750544443881886207
@@ -7824,6 +7824,7 @@ GameObject:
   - component: {fileID: 5741778636913406122}
   - component: {fileID: 553093829078402570}
   - component: {fileID: 6968410937423831593}
+  - component: {fileID: 7966580029879016096}
   m_Layer: 2
   m_Name: SoloPlayer
   m_TagString: Player
@@ -7977,6 +7978,47 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   wristMenu: {fileID: 4055097624604664567}
   toggleAction: {fileID: 0}
+--- !u!114 &7966580029879016096
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5616713772508033563}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bae1d37863c154044a282826ab3a65d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  rightRay: {fileID: 0}
+  leftRay: {fileID: 0}
+  rightController: {fileID: 5644428466570754547}
+  leftController: {fileID: 4321633302384425267}
+  maxDistance: 100
+  rightSelect:
+    m_UseReference: 0
+    m_Action:
+      m_Name: Right Select
+      m_Type: 0
+      m_ExpectedControlType: 
+      m_Id: 3cba3140-4980-46f3-9f4d-e783e0ea6289
+      m_Processors: 
+      m_Interactions: 
+      m_SingletonActionBindings: []
+      m_Flags: 0
+    m_Reference: {fileID: 0}
+  leftSelect:
+    m_UseReference: 0
+    m_Action:
+      m_Name: Left Select
+      m_Type: 0
+      m_ExpectedControlType: 
+      m_Id: e3938db0-8050-4947-bfea-a0eb29847c50
+      m_Processors: 
+      m_Interactions: 
+      m_SingletonActionBindings: []
+      m_Flags: 0
+    m_Reference: {fileID: 0}
 --- !u!1 &5690624795157418337
 GameObject:
   m_ObjectHideFlags: 0
@@ -8189,8 +8231,8 @@ Transform:
   m_GameObject: {fileID: 5705443684486680972}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.0000014652807, y: -0.0999991, z: 0.74999875}
-  m_LocalScale: {x: 1.0581841, y: 1.0581841, z: 1.0581841}
+  m_LocalPosition: {x: 0, y: -0.099999994, z: 0.74999994}
+  m_LocalScale: {x: 1.0581846, y: 1.0581846, z: 1.0581846}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2043440550325492291}
