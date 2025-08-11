@@ -1,0 +1,130 @@
+﻿title: tutorial
+---
+<<if $questStep == 1 and $stepPhase == "Pre">>
+    <<jump tutorial_step1_pre>>
+<<elseif $questStep == 1 and $stepPhase == "InProgress">>
+    <<jump tutorial_step1_in>>
+<<elseif $questStep == 1 and $stepPhase == "Post">>
+    <<jump tutorial_step1_post>>
+<<elseif $questStep == 2 and $stepPhase == "Pre">>
+    <<jump tutorial_step2_pre>>
+<<elseif $questStep == 2 and $stepPhase == "InProgress">>
+    <<jump tutorial_step2_in>>
+<<elseif $questStep == 2 and $stepPhase == "Post">>
+    <<jump tutorial_step2_post>>
+<<elseif $questStep == 3 and $stepPhase == "Pre">>
+    <<jump tutorial_step3_pre>>
+<<elseif $questStep == 3 and $stepPhase == "InProgress">>
+    <<jump tutorial_step3_in>>
+<<elseif $questStep == 3 and $stepPhase == "Post">>
+    <<jump tutorial_step3_post>>
+<<else>>
+    Luna: Hello, young wizard. How can I help you today?
+    <<stop>>
+<<endif>>
+
+=== 
+title: tutorial_step1_pre
+---
+Luna: Hello, I am Luna, your guide. Are you ready to learn the basics?
+-> Yes, I’m ready.
+    Luna: Great! Let’s start with simple rules and safe magic.
+    <<StartQuestStep "tutorial" "step1">>
+    Luna: Ask questions if you are not sure. I’m here to help.
+    <<stop>>
+-> Not yet.
+    Luna: That’s okay. Come back when you feel ready.
+    <<stop>>
+
+=== 
+title: tutorial_step1_in
+---
+Luna: We are talking now. Listen carefully and repeat after me.
+Luna: “Focus, breathe, and think before you cast.”
+-> I learned the basics.
+    Luna: Well done. You are ready for a small challenge.
+    <<CompleteQuestStep "tutorial" "step1">>
+    <<stop>>
+-> I need more help.
+    Luna: No problem. We can practice again. Take your time.
+    <<stop>>
+
+=== 
+title: tutorial_step1_post
+---
+Luna: Good work. Next, practice combat. Defeat 3 goblins.
+-> I will try the goblin practice.
+    Luna: Be brave, but stay safe. Use block and attack wisely.
+    <<StartQuestStep "tutorial" "step2">>
+    <<stop>>
+-> Maybe later.
+    Luna: Okay. Return when you are ready to practice.
+    <<stop>>
+
+===
+title: tutorial_step2_pre
+---
+Luna: Your task: defeat 3 goblins to learn basic combat.
+-> Start combat practice.
+    Luna: Remember: block first, then counterattack. You can do it.
+    <<StartQuestStep "tutorial" "step2">>
+    <<stop>>
+-> Not now.
+    Luna: Alright. Come back when you feel ready.
+    <<stop>>
+
+=== 
+title: tutorial_step2_in
+---
+Luna: How is the practice going?
+-> I defeated 3 goblins.
+    Luna: Great job! You learned the basics of combat.
+    <<CompleteQuestStep "tutorial" "step2">>
+    <<stop>>
+-> I’m still training.
+    Luna: Keep going. Watch the goblins’ moves and stay calm.
+    <<stop>>
+
+=== 
+title: tutorial_step2_post
+---
+Luna: Excellent. Now go to the town to begin your real journey.
+-> I will go to the town.
+    Luna: Follow the road and talk to the people there.
+    <<StartQuestStep "tutorial" "step3">>
+    <<stop>>
+-> I need a break.
+    Luna: Rest is also important. Return when you are ready.
+    <<stop>>
+
+=== 
+title: tutorial_step3_pre
+---
+Luna: Your next step is to reach the town.
+-> I will head to the town now.
+    Luna: Good. Stay alert, and enjoy the view on the way.
+    <<StartQuestStep "tutorial" "step3">>
+    <<stop>>
+-> I have questions first.
+    Luna: Ask me anything. I will guide you.
+    <<stop>>
+
+=== 
+title: tutorial_step3_in
+---
+Luna: Did you reach the town?
+-> Yes, I arrived at the town.
+    Luna: Wonderful! Your tutorial is complete.
+    <<CompleteQuestStep "tutorial" "step3">>
+    <<stop>>
+-> Not yet.
+    Luna: Keep going. You are close. Don’t give up!
+    <<stop>>
+
+=== 
+title: tutorial_step3_post
+---
+Luna: You finished the tutorial steps. I’m proud of you.
+Luna: Your real adventure begins now.
+<<stop>>
+===

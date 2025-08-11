@@ -10,7 +10,6 @@ public class BookInteraction : MonoBehaviour, IInteractable
     {
         var name = GetComponent<TargetIdentity>().targetData.outterName;
         return $"Open the {name} book."; 
-        // 나 빌리지에서 작업 한다. ㅇㅇ 
     }
 
     public void Interact()
