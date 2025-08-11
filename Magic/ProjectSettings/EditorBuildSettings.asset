@@ -8,6 +8,12 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/StartVRMode.unity
     guid: 9baaf70826185924dbd85a3290a03efe
+  - enabled: 1
+    path: Assets/Scenes/D_LV10.unity
+    guid: 1dd7fd05f7dd7e54f848b5a7e6c05043
+  - enabled: 1
+    path: Assets/Scenes/D_LV5.unity
+    guid: 42cba6151d7bb7740bfef97aa34d8c71
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: bfa1182bd221b4ca89619141f66f1260, type: 2}
     Unity.XR.WindowsMR.Settings: {fileID: 11400000, guid: dc5a169419fa04987b057f65238cf3ba, type: 2}
