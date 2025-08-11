@@ -9,6 +9,14 @@ public class TargetIdentity : MonoBehaviour
     {
         if (targetData != null)
         {
+            // var h = GetComponent<Health>();
+            // if (h != null)
+            // {
+            //     h.faction = targetData.targetType == TargetType.Player ? FactionType.Player :
+            //         targetData.targetType == TargetType.Monster ? FactionType.Monster :
+            //         FactionType.Neutral;
+            // }
+
             Debug.Log($"target ID: {targetData.targetID}, 이름: {targetData.outterName}");
         }
     }
