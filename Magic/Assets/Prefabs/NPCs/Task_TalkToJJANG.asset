@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12252044d8b27424a88a28e9b593a3b5, type: 3}
+  m_Name: Task_TalkToJJANG
+  m_EditorClassIdentifier: 
+  category: {fileID: 11400000, guid: 069c333e93730894580ad51bcd86e8b6, type: 2}
+  codeName: TalkToJJANGforTutorial
+  displayName: "\uB9C8\uC744 \uC785\uC8FC\uD558\uAE30"
+  description: "\uBA54\uD0C0\uB9C8\uC744\uC5D0 \uC624\uC2E0\uAC78 \uD658\uC601\uD574\uC694."
+  directions:
+  - "\uB9C8\uC744 \uB458\uB7EC\uBCF4\uAE30"
+  - "\uB2E4\uAC00\uC624\uB294 \uC8FC\uBBFC\uACFC \uB300\uD654\uB97C \uB098\uB204\uC5B4
+    \uC815\uBCF4 \uC5BB\uAE30"
+  goal: "\uB9C8\uC744\uC758 \uAD6C\uC131\uC6D0\uC774 \uB418\uC5B4\uBCF4\uC790."
+  position: 0
+  action: {fileID: 11400000, guid: 93ba6872ce644cf49a5e71a6211b689c, type: 2}
+  targets:
+  - {fileID: 11400000, guid: b100aa2e6fe24734f93b552a32d92600, type: 2}
+  beforDialogueLines: []
+  IngDialogueLines: []
+  AfterDialogueLines:
+  - speaker: "\uC548\uB0B4\uC6D0"
+    dialogue:
+    - "\uC5B4\uC11C \uC640! \uBA54\uD0C0 \uB9C8\uC744\uC758 \uC0C8\uB85C\uC6B4 \uC8FC\uBBFC\uC774
+      \uB41C \uAC78 \uD658\uC601\uD574!"
+    - "\uB098\uB294 \uB108\uC5D0\uAC8C \uC774\uACF3\uC744 \uC18C\uAC1C\uD574 \uC904
+      \uB9C8\uC744 \uC548\uB0B4\uC6D0\uC774\uC57C. \uC6B0\uB9AC \uB9C8\uC744\uC774
+      \uCC98\uC74C\uC774\uB2C8?"
+    options:
+    - optionText: "\uC751, \uCC98\uC74C\uC774\uC57C."
+      nextDialogue:
+      - speaker: "\uC548\uB0B4\uC6D0"
+        dialogue:
+        - "\uBA54\uD0C0 \uB9C8\uC744\uC5D0\uC11C\uB294 \uB3C8\uC744 \uBC8C\uACE0
+          \uAD00\uB9AC\uD558\uBA70 \uC790\uC0B0\uC744 \uD0A4\uC6B8 \uC218 \uC788\uC5B4.
+          \uD0A4\uC6B4 \uC790\uC0B0\uC73C\uB85C \uB2E4\uC591\uD55C \uBB3C\uAC74\uC744
+          \uC0B4 \uC218\uB3C4 \uC788\uC9C0."
+        - "\uC790\uC0B0\uC744 \uD0A4\uC6B0\uAE30 \uC704\uD574\uC11C\uB294 \uAE08\uC735
+          \uC9C0\uC2DD\uC744 \uC313\uB294 \uAC83\uC774 \uB9E4\uC6B0 \uC911\uC694\uD574.
+          \uAE08\uC735 \uC9C0\uC2DD\uC774\uB780 \uACBD\uC81C\uC640 \uC790\uC0B0 \uAD00\uB9AC\uC5D0
+          \uB300\uD55C \uBAA8\uB4E0 \uC815\uBCF4\uB97C \uC758\uBBF8\uD574. "
+        options: []
+        currentState: 2
+        changedState: 3
+        eventNum: {x: 0, y: 0}
+      optioneventNum: {x: 0, y: 0}
+    - optionText: "\uC544\uB2C8, \uC798 \uC54C\uACE0\uC788\uC5B4."
+      nextDialogue:
+      - speaker: "\uC548\uB0B4\uC6D0"
+        dialogue:
+        - "\uADF8\uB807\uAD6C\uB098! \uBAA8\uB974\uB294 \uAC8C \uC788\uC73C\uBA74
+          \uB0A0 \uCC3E\uC544\uC640. \uC990\uAC81\uAC8C \uC798 \uC9C0\uB0B4\uAE38
+          \uBC14\uB77C!"
+        options: []
+        currentState: 2
+        changedState: 3
+        eventNum: {x: 0, y: 0}
+      optioneventNum: {x: 0, y: 0}
+    currentState: 2
+    changedState: 3
+    eventNum: {x: 0, y: 0}
+  initialSuccessValue: {fileID: 0}
+  needSuccessToComplete: 1
+  canReceiveReportsDuringCompletion: 0
