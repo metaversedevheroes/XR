@@ -1,233 +1,325 @@
 using UnityEngine;
 using System.Collections;
 
+// NPCAnimationDirector — 드래곤 사망 연동 + 콤보/단독 VFX + 단독 1.7초 지연 최종본
 public class NPCAnimationDirector : MonoBehaviour
 {
     [Header("Animation Settings")]
     public Animator animator;
     public float crossFade = 0.3f;
-    
+
     [Header("Animation State Names")]
     public string idleState = "Idle";
     public string walkState = "Walk";
     public string talkState = "Talk";
-    public string handUpState = "Hand Up";
-    public string handAttackState = "Hand Attack";
-    public string handsAttackState = "Hands Attack";
-    
+    public string handUpState = "Hand Up";          // 콤보 1단
+    public string handAttackState = "Hand Attack";  // 콤보 2단(여기서 콤보 VFX 발생)
+    public string handsAttackState = "Hands Attack";// 단독(여기서 단독 VFX, 지연 발생)
+
     [Header("Attack Settings")]
     public float attackStartDelay = 3f;
     public float attackInterval = 2f;
     public bool randomizeAttack = true;
-    [Range(0f, 1f)]
-    public float comboProbability = 0.5f;
-    
+    [Range(0f, 1f)] public float comboProbability = 0.5f;
+
     [Header("Animation Durations")]
     public float handUpLen = 1f;
     public float handAttackLen = 1f;
     public float handsAttackLen = 2f;
-    
-    // Private variables
+
+    [Header("Skill VFX (인스펙터 연결)")]
+    public Transform vfxSocket;               // 손/가슴 등 기준점
+    public bool attachVfxToSocket = true;     // true면 소켓에 붙어서(Local) 따라감
+    public Vector3 vfxEulerOffset = Vector3.zero;
+
+    [Tooltip("콤보(Hand Attack 시점) VFX 프리팹")]
+    public GameObject comboVfxPrefab;
+    public float comboVfxLifetime = 1.2f;     // 0이면 지속 → 수동정리
+
+    [Tooltip("단독(Hands Attack 시점) VFX 프리팹")]
+    public GameObject singleVfxPrefab;
+    public float singleVfxLifetime = 1.2f;    // 0이면 지속 → 수동정리
+
+    [Tooltip("단독 스킬 애니메이션 시작 후 VFX 지연(초)")]
+    public float singleVfxDelay = 1.7f;       // ★ 요청 반영: 기본 1.7초
+
+    // 상태
     private bool isWalking = false;
     private bool isTalking = false;
     private bool isInAttackZone = false;
     private bool isAttacking = false;
     private int attackCounter = 0;
-    
-    // Coroutines
+    private bool dragonDefeated = false;
+
+    // 코루틴
     private Coroutine attackCoroutine;
     private Coroutine talkCoroutine;
-    
+
+    // 지속형 VFX 추적
+    private GameObject activeComboVfx;
+    private GameObject activeSingleVfx;
+
+    void OnEnable()
+    {
+        BossMonster.OnBossDefeated += HandleDragonDefeated; // 드래곤 사망 이벤트 구독
+    }
+
+    void OnDisable()
+    {
+        BossMonster.OnBossDefeated -= HandleDragonDefeated;
+    }
+
     void Start()
     {
-        // Get animator if not assigned
-        if (animator == null)
+        if (!animator) animator = GetComponent<Animator>();
+        if (!animator)
         {
-            animator = GetComponent<Animator>();
-        }
-        
-        if (animator == null)
-        {
-            Debug.LogError("Animator component not found!");
+            Debug.LogError("[NPCAnimationDirector] Animator component not found!");
+            enabled = false;
             return;
         }
-        
-        // Start with idle animation
+        if (!vfxSocket) vfxSocket = transform;
+
         PlayAnimation(idleState);
     }
-    
-    /// <summary>
-    /// Set walking state from NPCFollower
-    /// </summary>
+
+    /// <summary>드래곤이 죽었을 때 호출(이벤트로 자동 수신)</summary>
+    public void HandleDragonDefeated()
+    {
+        if (dragonDefeated) return;
+        dragonDefeated = true;
+
+        if (attackCoroutine != null) { StopCoroutine(attackCoroutine); attackCoroutine = null; }
+        if (talkCoroutine   != null) { StopCoroutine(talkCoroutine);   talkCoroutine   = null; }
+
+        isInAttackZone = false;
+        isAttacking = false;
+        isTalking = false;
+        isWalking = false;
+
+        StopAllSkillVfx();
+        PlayAnimation(idleState);
+    }
+
+    // === 외부 제어 API ===
     public void SetWalking(bool walking)
     {
+        if (dragonDefeated) return;
         isWalking = walking;
         UpdateMovementAnimation();
     }
-    
-    /// <summary>
-    /// Begin talk animation
-    /// </summary>
+
     public void BeginTalk(float duration)
     {
-        if (talkCoroutine != null)
-        {
-            StopCoroutine(talkCoroutine);
-        }
-        
+        if (dragonDefeated) return;
+        if (talkCoroutine != null) StopCoroutine(talkCoroutine);
         talkCoroutine = StartCoroutine(TalkSequence(duration));
     }
-    
-    /// <summary>
-    /// Enter attack zone - start attack loop
-    /// </summary>
+
     public void EnterAttackZone()
     {
+        if (dragonDefeated) return;
         isInAttackZone = true;
-        
         if (attackCoroutine == null)
-        {
             attackCoroutine = StartCoroutine(AttackLoop());
-        }
     }
-    
-    /// <summary>
-    /// Exit attack zone - stop attack loop
-    /// </summary>
+
     public void ExitAttackZone()
     {
         isInAttackZone = false;
-        
         if (attackCoroutine != null)
         {
             StopCoroutine(attackCoroutine);
             attackCoroutine = null;
         }
-        
-        // Return to movement animation if not attacking
-        if (!isAttacking)
-        {
-            UpdateMovementAnimation();
-        }
+        if (!isAttacking) UpdateMovementAnimation();
+        StopAllSkillVfx();
     }
-    
-    /// <summary>
-    /// Update movement animation (Idle/Walk) based on current state
-    /// </summary>
+
+    // === 내부 로직 ===
     private void UpdateMovementAnimation()
     {
         if (isTalking || isAttacking) return;
-        
-        if (isWalking)
-        {
-            PlayAnimation(walkState);
-        }
-        else
-        {
-            PlayAnimation(idleState);
-        }
+        PlayAnimation(isWalking ? walkState : idleState);
     }
-    
-    /// <summary>
-    /// Play animation using CrossFadeInFixedTime
-    /// </summary>
+
     private void PlayAnimation(string stateName)
     {
-        if (animator == null) return;
-        
+        if (!animator) return;
         animator.CrossFadeInFixedTime(stateName, crossFade);
     }
-    
-    /// <summary>
-    /// Talk sequence coroutine
-    /// </summary>
+
     private IEnumerator TalkSequence(float duration)
     {
         isTalking = true;
         PlayAnimation(talkState);
-        
         yield return new WaitForSeconds(duration);
-        
         isTalking = false;
-        
-        // Return to appropriate animation
         UpdateMovementAnimation();
-        
         talkCoroutine = null;
     }
-    
-    /// <summary>
-    /// Attack loop coroutine
-    /// </summary>
+
     private IEnumerator AttackLoop()
     {
-        // Initial delay before first attack
-        yield return new WaitForSeconds(attackStartDelay);
-        
-        while (isInAttackZone)
+        // 첫 딜레이
+        float waited = 0f;
+        while (isInAttackZone && !dragonDefeated && waited < attackStartDelay)
         {
-            // Wait if talking
-            while (isTalking && isInAttackZone)
-            {
-                yield return new WaitForSeconds(0.1f);
-            }
-            
-            if (!isInAttackZone) break;
-            
-            // Execute attack
+            waited += Time.deltaTime;
+            yield return null;
+        }
+        if (!isInAttackZone || dragonDefeated) { attackCoroutine = null; yield break; }
+
+        while (isInAttackZone && !dragonDefeated)
+        {
+            // 대화 중 대기
+            while (isTalking && isInAttackZone && !dragonDefeated)
+                yield return null;
+
+            if (!isInAttackZone || dragonDefeated) break;
+
             yield return StartCoroutine(ExecuteAttack());
-            
-            // Wait for next attack
-            if (isInAttackZone)
+
+            // 쿨타임
+            float t = 0f;
+            while (t < attackInterval && isInAttackZone && !dragonDefeated)
             {
-                yield return new WaitForSeconds(attackInterval);
+                t += Time.deltaTime;
+                yield return null;
             }
         }
-        
         attackCoroutine = null;
     }
-    
-    /// <summary>
-    /// Execute a single attack (combo or single)
-    /// </summary>
+
     private IEnumerator ExecuteAttack()
     {
         isAttacking = true;
         attackCounter++;
-        
+
         bool useCombo = randomizeAttack ? (Random.value < comboProbability) : true;
-        
+
         if (useCombo)
         {
-            // Combo attack: Hand Up -> Hand Attack
             Debug.Log($"스킬 {attackCounter} — 콤보 (Hand Up → Hand Attack)");
-            
-            // Play Hand Up
+
+            // 1) Hand Up
             PlayAnimation(handUpState);
             yield return new WaitForSeconds(handUpLen);
-            
-            // Play Hand Attack
-            if (isInAttackZone) // Check if still in zone
+
+            // 2) Hand Attack + 콤보 VFX
+            if (isInAttackZone && !dragonDefeated)
             {
                 PlayAnimation(handAttackState);
+                SpawnComboVfx(); // 콤보 VFX는 2단계에서 즉시
                 yield return new WaitForSeconds(handAttackLen);
             }
         }
         else
         {
-            // Single attack: Hands Attack
             Debug.Log($"스킬 {attackCounter} — 단독 (Hands Attack)");
-            
+
+            // 단독 애니 시작
             PlayAnimation(handsAttackState);
-            yield return new WaitForSeconds(handsAttackLen);
+
+            // ★ 단독 VFX 지연: singleVfxDelay(기본 1.7초)
+            float t = 0f;
+            while (t < singleVfxDelay && isInAttackZone && !dragonDefeated)
+            {
+                t += Time.deltaTime;
+                yield return null;
+            }
+
+            // 아직 존 안이고 살아있으면 VFX 발사
+            if (isInAttackZone && !dragonDefeated)
+                SpawnSingleVfx();
+
+            // 애니메이션 잔여 구간 대기
+            float remain = Mathf.Max(0f, handsAttackLen - singleVfxDelay);
+            if (remain > 0f)
+            {
+                float r = 0f;
+                while (r < remain && isInAttackZone && !dragonDefeated)
+                {
+                    r += Time.deltaTime;
+                    yield return null;
+                }
+            }
         }
-        
+
         isAttacking = false;
-        
-        // Return to movement animation
-        if (isInAttackZone)
-        {
+
+        if (isInAttackZone && !dragonDefeated)
             UpdateMovementAnimation();
+    }
+
+    // === VFX 스폰/정리 ===
+    void SpawnComboVfx()
+    {
+        if (!comboVfxPrefab || !vfxSocket) return;
+
+        if (comboVfxLifetime <= 0f) StopComboVfx();
+
+        var go = Instantiate(comboVfxPrefab);
+        if (attachVfxToSocket)
+        {
+            go.transform.SetParent(vfxSocket, worldPositionStays:false);
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localRotation = Quaternion.Euler(vfxEulerOffset);
         }
+        else
+        {
+            go.transform.position = vfxSocket.position;
+            go.transform.rotation = vfxSocket.rotation * Quaternion.Euler(vfxEulerOffset);
+        }
+
+        if (comboVfxLifetime > 0f) Destroy(go, comboVfxLifetime);
+        else activeComboVfx = go;
+    }
+
+    void SpawnSingleVfx()
+    {
+        if (!singleVfxPrefab || !vfxSocket) return;
+
+        if (singleVfxLifetime <= 0f) StopSingleVfx();
+
+        var go = Instantiate(singleVfxPrefab);
+        if (attachVfxToSocket)
+        {
+            go.transform.SetParent(vfxSocket, worldPositionStays:false);
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localRotation = Quaternion.Euler(vfxEulerOffset);
+        }
+        else
+        {
+            go.transform.position = vfxSocket.position;
+            go.transform.rotation = vfxSocket.rotation * Quaternion.Euler(vfxEulerOffset);
+        }
+
+        if (singleVfxLifetime > 0f) Destroy(go, singleVfxLifetime);
+        else activeSingleVfx = go;
+    }
+
+    void StopComboVfx()
+    {
+        if (!activeComboVfx) return;
+        var ps = activeComboVfx.GetComponent<ParticleSystem>();
+        if (ps) ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+        Destroy(activeComboVfx, 1f);
+        activeComboVfx = null;
+    }
+
+    void StopSingleVfx()
+    {
+        if (!activeSingleVfx) return;
+        var ps = activeSingleVfx.GetComponent<ParticleSystem>();
+        if (ps) ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+        Destroy(activeSingleVfx, 1f);
+        activeSingleVfx = null;
+    }
+
+    void StopAllSkillVfx()
+    {
+        StopComboVfx();
+        StopSingleVfx();
     }
 }
