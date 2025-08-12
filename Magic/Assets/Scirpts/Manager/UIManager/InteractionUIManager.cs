@@ -16,7 +16,9 @@ public class InteractionUIManager : MonoBehaviour
 
     public void ShowPrompt(string text)
     {
+        Debug.Log("상황발생");
         promptText.text = text;
+        Debug.Log($"{promptText.text}라고 하십니다.");
         promptUI.SetActive(true);
     }
 
