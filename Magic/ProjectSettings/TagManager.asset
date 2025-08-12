@@ -31,7 +31,6 @@ TagManager:
   - LiSentence
   - LiTense
   - LiVoca
-  - NPC
   layers:
   - Default
   - TransparentFX
@@ -39,8 +38,8 @@ TagManager:
   - Overlay UI
   - Water
   - UI
-  - Player
-  - Monster
+  - 
+  - 
   - 
   - 
   - 
