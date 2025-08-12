@@ -40,4 +40,6 @@ public class QuestGroupItem : MonoBehaviour
             stepsContainerRoot.SetActive(!stepsContainerRoot.activeSelf);
         });
     }
+    
+    
 }

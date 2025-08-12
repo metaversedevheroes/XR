@@ -40,4 +40,12 @@ public class QuestStepManager
     // 외부에서 안전하게 카운트 조작할 수 있도록 메서드 제공
     public void AddCount(int value) => currentCount += value;
     public void SubtractCount(int value) => currentCount -= value;
+    
+    // 외부 트리거
+    public void TriggerActionFromOutside()
+    {
+        if (!IsStarted) IsStarted = true;
+        // 수치 증감/감소는 스텝에 달린 SO가 수행 (이미 구현되어 있음)
+        stepData.onInteractAction?.Execute(this);
+    }
 }

@@ -80,4 +80,19 @@ public class QuestSystem : MonoBehaviour
         activeQuests.TryGetValue(questID, out var gm);
         return gm;
     }
+    
+    // 외부에서 연락 받는 곳
+    public void ReportProgress(string targetID, QuestStepType stepType)
+    {
+        foreach (var qm in activeQuests.Values)
+        {
+            if (qm.TryTriggerBy(targetID, stepType))
+            {
+                Debug.Log($"[퀘스트] {targetID}/{stepType} 트리거 처리됨 → {qm.groupData.title}");
+                break; // 1개만 처리(필요시 정책에 따라 여러 개 처리도 가능)
+            }
+        }
+    }
+
+    
 }

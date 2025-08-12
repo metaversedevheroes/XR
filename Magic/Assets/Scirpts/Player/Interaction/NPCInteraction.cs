@@ -6,6 +6,7 @@ public class NPCInteraction : MonoBehaviour, IInteractable
 {
     public TargetData targetData;
     private DialogueRouter router;
+    public QuestHookRunner hooks;
 
     void Awake()
     {
@@ -22,5 +23,7 @@ public class NPCInteraction : MonoBehaviour, IInteractable
     {
         Debug.Log("NPC 와 상호작용 중");
         router.StartDialogueFor(targetData);
+        
+        hooks?.Notify();
     }
 }

@@ -70,4 +70,32 @@ public class QuestGroupManager
     }
 
     public bool IsQuestCompleted => stepManagers.All(s => s.IsStepComplete);
+    
+    // 대상/종류로 스텝을 찾아서 알림
+    public bool TryTriggerBy(string targetID, QuestStepType stepType)
+    {
+        // 순차 진행이면 현재 스텝만 허용
+        QuestStepManager candidate = groupData.isStepByStep
+            ? stepManagers[currentStepIndex]
+            : stepManagers.FirstOrDefault(sm => !sm.IsStepComplete);
+
+        // 매칭: 대상 + 스텝 타입
+        if (candidate == null ||
+            candidate.stepData.target == null ||
+            candidate.stepData.target.targetID != targetID ||
+            candidate.stepData.stepType != stepType)
+            return false;
+
+        candidate.TriggerActionFromOutside();
+
+        // 다음 스텝으로 진행/완료 처리
+        if (candidate.IsStepComplete && currentStepIndex < stepManagers.Count - 1)
+            currentStepIndex++;
+
+        if (IsQuestCompleted)
+            OnQuestCompleted?.Invoke();
+
+        return true;
+    }
+
 }
