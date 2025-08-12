@@ -225,8 +225,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 468256218}
-  - component: {fileID: 468256217}
-  - component: {fileID: 468256216}
   - component: {fileID: 468256215}
   m_Layer: 0
   m_Name: AttackZone
@@ -256,59 +254,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!23 &468256216
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 468256214}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!33 &468256217
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 468256214}
-  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!4 &468256218
 Transform:
   m_ObjectHideFlags: 0
@@ -777,10 +722,10 @@ Rigidbody:
     m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
-  m_UseGravity: 1
-  m_IsKinematic: 0
+  m_UseGravity: 0
+  m_IsKinematic: 1
   m_Interpolate: 0
-  m_Constraints: 0
+  m_Constraints: 4
   m_CollisionDetection: 0
 --- !u!1 &1322472049
 GameObject:
@@ -857,6 +802,81 @@ CharacterController:
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &2051393243 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 614730566706615826, guid: 60f7219c438624cba9dd1070c70e85c3, type: 3}
+  m_PrefabInstance: {fileID: 2658825541172359490}
+  m_PrefabAsset: {fileID: 0}
+--- !u!95 &2051393245 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 4104439867883489434, guid: 60f7219c438624cba9dd1070c70e85c3, type: 3}
+  m_PrefabInstance: {fileID: 2658825541172359490}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2051393247
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2051393243}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c1e09d86941f4fa085e516187443bd8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  debugLogs: 1
+  playerTag: Player
+  attackZoneTag: AttackZone
+  localOffset: {x: 0.8, y: 0, z: 1.2}
+  followSpeed: 4
+  smoothTime: 0.15
+  rotationLerp: 10
+  stopDistance: 0.25
+  lockToGround: 1
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  groundProbeStart: 1.5
+  groundProbeDistance: 4
+  groundYOffset: 0
+  moveStartSpeed: 0.2
+  moveStopSpeed: 0.1
+  speedSmoothing: 10
+  settleTime: 0.12
+  talkTarget: {fileID: 677872221}
+  talkDuration: 1.5
+  raycam: {fileID: 887410803}
+  keepFacingPlayerAfterTalk: 1
+  playerMoveWakeThreshold: 0.03
+  zonesRefreshInterval: 1
+  zoneOverlapRadius: 0.3
+--- !u!114 &2051393248
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2051393243}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02dcc9f87f60c48be880a54c9b7b188f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  animator: {fileID: 2051393245}
+  crossFade: 0.12
+  idleState: Idle
+  walkState: Walk
+  talkState: Talk
+  handUpState: Hand Up
+  handAttackState: Hand Attack
+  handsAttackState: Hands Attack
+  attackStartDelay: 3
+  attackInterval: 3
+  randomizeAttack: 1
+  comboProbability: 0.6
+  handUpLen: 1
+  handAttackLen: 1
+  handsAttackLen: 1
 --- !u!1001 &2658825541172359490
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -915,7 +935,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1864557624372435190, guid: 60f7219c438624cba9dd1070c70e85c3, type: 3}
       propertyPath: m_Convex
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3106150836561841968, guid: 60f7219c438624cba9dd1070c70e85c3, type: 3}
       propertyPath: m_LocalPosition.x
@@ -937,10 +957,17 @@ PrefabInstance:
       propertyPath: talkTarget
       value: 
       objectReference: {fileID: 677872221}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 6247514322681104316, guid: 60f7219c438624cba9dd1070c70e85c3, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 614730566706615826, guid: 60f7219c438624cba9dd1070c70e85c3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2051393248}
+    - targetCorrespondingSourceObject: {fileID: 614730566706615826, guid: 60f7219c438624cba9dd1070c70e85c3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2051393247}
     - targetCorrespondingSourceObject: {fileID: 2328522730229290378, guid: 60f7219c438624cba9dd1070c70e85c3, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1246651518}
