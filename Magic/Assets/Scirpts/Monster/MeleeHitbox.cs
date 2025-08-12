@@ -1,24 +1,50 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(Collider))]
 public class MeleeHitbox : MonoBehaviour
 {
-    public int skillPower = 10;     // 스킬/무기 위력
+    [Header("무기 데미지")]
+    public int skillPower = 10;
+    [Header("공격 가능 반경")]
+    public float radius = 1.5f; 
+    [Header("공격 대상")]
     public LayerMask targetMask; 
-    public Attacktype attacktype;
+    [Header("공격 타입")]
+    public Attacktype attacktype; 
+
+    private readonly HashSet<Health> _hitOnce = new();
 
     public void Swing(GameObject attacker)
     {
-        var center = transform.position + transform.forward * 1.0f;
-        var hits = Physics.OverlapSphere(center, 1.5f, targetMask);
+        // 공격 시작 이벤트
+        var startCtx = new AttackContext(attacker, null, skillPower, transform.position, attacktype);
+        CombatEvents.RaiseAttackStarted(startCtx);
 
-        foreach (var h in hits) {
-            var defenderGO = h.gameObject;
-            var ctx = new AttackContext(attacker, defenderGO, skillPower, h.ClosestPoint(center), attacktype);
+        _hitOnce.Clear();
+
+        var center = transform.position + transform.forward * 1.0f;
+        var hits = Physics.OverlapSphere(center, radius, targetMask);
+
+        foreach (var h in hits)
+        {
+            var hp = h.GetComponentInParent<Health>();
+            if (hp == null || !hp.IsAlive) continue;
+            if (_hitOnce.Contains(hp)) continue;
+
+            // 공격자 속성 우선
+            var atkProv = attacker.GetComponent<IAttackProvider>();
+            var type = atkProv != null ? atkProv.Attacktype : attacktype;
+
+            var hitPoint = h.ClosestPoint(center);
+            var ctx = new AttackContext(attacker, hp.gameObject, skillPower, hitPoint, type);
             var result = DamageCalculator.Compute(ctx);
 
-            var hp = defenderGO.GetComponent<Health>();
-            if (hp != null) hp.ApplyDamage(result.finalDamage, ctx.hitPoint);
+            hp.ApplyDamage(result.finalDamage, hitPoint);
+
+            CombatEvents.RaiseHit(new HitInfo { context = ctx, result = result });
+
+            _hitOnce.Add(hp);
         }
     }
 }
