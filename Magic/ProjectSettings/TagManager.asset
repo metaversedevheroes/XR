@@ -31,6 +31,8 @@ TagManager:
   - LiSentence
   - LiTense
   - LiVoca
+  - NPC
+  - AttackZone
   layers:
   - Default
   - TransparentFX
