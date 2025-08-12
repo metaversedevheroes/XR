@@ -5,6 +5,33 @@ TagManager:
   serializedVersion: 3
   tags:
   - Anchor
+  - QDSUISection
+  - QDSUIAccentColor
+  - QDSUISecondaryButton
+  - QDSUIPrimaryButton
+  - QDSUITextSecondaryInvertedColor
+  - QDSUITextInvertedColor
+  - QDSUIToggleButton
+  - QDSUIIcon
+  - QDSUITextSecondaryColor
+  - QDSUIDestructiveButton
+  - QDSUISharedThemeColor
+  - QDSUIBorderlessButton
+  - QDSUIToggleBorderlessButton
+  - QDSUIBackplateGradient
+  - QDSUITooltip
+  - QDSUIToggleSwitch
+  - PassThroughButton
+  - PassThrough
+  - Locomotion
+  - LocoButton
+  - LocoText
+  - QDSUITextInputField
+  - SamplesInfoPanel
+  - LiSentence
+  - LiTense
+  - LiVoca
+  - NPC
   layers:
   - Default
   - TransparentFX
@@ -12,8 +39,8 @@ TagManager:
   - Overlay UI
   - Water
   - UI
-  - 
-  - 
+  - Player
+  - Monster
   - 
   - 
   - 
