@@ -1,4 +1,4 @@
-// DragonAnimationDirector.cs — 최종본(사망 시 브레스 완전 정지)
+// DragonAnimationDirector.cs — 최종본(AttackZone 감지 수정)
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -14,6 +14,12 @@ public class DragonAnimationDirector : MonoBehaviour
     [Header("Tags")]
     public string playerTag = "Player";
     public string attackZoneTag = "AttackZone";
+    
+    [Header("VR Player Settings")]
+    [Tooltip("VR의 경우 XR Origin이나 카메라 오프셋 오브젝트를 직접 지정")]
+    public Transform vrPlayerTransform;
+    [Tooltip("플레이어 위치를 바닥 기준으로 계산할지 (Y축 0으로)")]
+    public bool useGroundPosition = true;
 
     [Header("Skill Prefabs")]
     public GameObject fireSkillPrefab;        // "Fire"
@@ -23,10 +29,11 @@ public class DragonAnimationDirector : MonoBehaviour
     public float fireeeeSkillLifetime = 2.5f;
     public Vector3 skillEulerOffset   = Vector3.zero; // 방향 보정
 
-    [Header("AttackZone 감지(존에 스크립트 불필요)")]
-    public float zoneOverlapRadius   = 0.35f;
+    [Header("AttackZone 감지")]
+    public float zoneOverlapRadius   = 1.0f;  // 0.35f에서 1.0f로 증가
     public float zoneScanInterval    = 0.1f;
     public float delayedSequenceAfter= 20f;   // 진입 후 20초 뒤 사망 시퀀스
+    public bool debugZoneDetection   = true;  // 디버깅용
 
     [Header("Animator States(클립명과 동일)")]
     const string G_Idle     = "Idle";
@@ -72,6 +79,9 @@ public class DragonAnimationDirector : MonoBehaviour
         if (!mouthSocket) mouthSocket = transform;
         ResolvePlayer();
         Play(G_Idle);
+        
+        if (debugZoneDetection)
+            Debug.Log($"[Dragon] 초기화 완료. Player: {(player ? player.name : "null")}, ZoneRadius: {zoneOverlapRadius}");
     }
 
     void Update()
@@ -92,6 +102,9 @@ public class DragonAnimationDirector : MonoBehaviour
     {
         if (combatStarted || !alive) return;
         combatStarted = true;
+
+        if (debugZoneDetection)
+            Debug.Log("[Dragon] 전투 시작!");
 
         attackCo = StartCoroutine(AttackLoop());
 
@@ -157,46 +170,156 @@ public class DragonAnimationDirector : MonoBehaviour
         }
     }
 
-    // ===== AttackZone 감지(존에 스크립트 불필요) =====
+    // ===== AttackZone 감지 개선 =====
     bool CheckPlayerEnteredAnyAttackZone()
     {
-        if (!player) { ResolvePlayer(); if (!player) return false; }
-
-        var hits = Physics.OverlapSphere(player.position, zoneOverlapRadius, ~0, QueryTriggerInteraction.Collide);
-        var nowInside = new HashSet<Collider>();
-        foreach (var c in hits)
-        {
-            if (c && IsAttackZone(c)) nowInside.Add(c);
+        if (!player) 
+        { 
+            ResolvePlayer(); 
+            if (!player) 
+            {
+                if (debugZoneDetection)
+                    Debug.LogWarning("[Dragon] 플레이어를 찾을 수 없습니다.");
+                return false; 
+            }
         }
 
-        bool entered = false;
-        foreach (var z in nowInside)
-            if (!insideZones.Contains(z)) { insideZones.Add(z); entered = true; }
+        // VR의 경우 바닥 기준 위치 계산
+        Vector3 checkPosition = player.position;
+        if (useGroundPosition)
+        {
+            checkPosition.y = 0f; // 바닥 기준으로 계산
+        }
 
-        // exit 정리
-        var remove = new List<Collider>();
-        foreach (var z in insideZones)
-            if (!nowInside.Contains(z)) remove.Add(z);
-        foreach (var z in remove) insideZones.Remove(z);
+        if (debugZoneDetection)
+            Debug.Log($"[Dragon] 플레이어 원본 위치: {player.position}, 감지 위치: {checkPosition}, 감지 반경: {zoneOverlapRadius}");
+
+        // 모든 Collider 검색 (Trigger와 일반 Collider 모두 포함)
+        var hits = Physics.OverlapSphere(checkPosition, zoneOverlapRadius, -1, QueryTriggerInteraction.Collide);
+        var nowInside = new HashSet<Collider>();
+        
+        if (debugZoneDetection)
+            Debug.Log($"[Dragon] 플레이어 주변에서 {hits.Length}개 콜라이더 감지");
+
+        foreach (var hit in hits)
+        {
+            if (hit)
+            {
+                if (debugZoneDetection)
+                    Debug.Log($"[Dragon] 감지된 콜라이더: {hit.name}, 태그: {hit.tag}, IsTrigger: {hit.isTrigger}");
+                
+                if (IsAttackZone(hit)) 
+                {
+                    nowInside.Add(hit);
+                    if (debugZoneDetection)
+                        Debug.Log($"[Dragon] ★ AttackZone 발견: {hit.name}");
+                }
+            }
+        }
+
+        // 새로 진입한 존 확인
+        bool entered = false;
+        foreach (var zone in nowInside)
+        {
+            if (!insideZones.Contains(zone)) 
+            { 
+                insideZones.Add(zone); 
+                entered = true;
+                if (debugZoneDetection)
+                    Debug.Log($"[Dragon] ★★ AttackZone 진입 확인: {zone.name}");
+            }
+        }
+
+        // 나간 존들 정리
+        var toRemove = new List<Collider>();
+        foreach (var zone in insideZones)
+        {
+            if (!nowInside.Contains(zone)) 
+            {
+                toRemove.Add(zone);
+                if (debugZoneDetection)
+                    Debug.Log($"[Dragon] AttackZone 이탈: {zone.name}");
+            }
+        }
+        foreach (var zone in toRemove) 
+            insideZones.Remove(zone);
 
         return entered;
     }
 
     bool IsAttackZone(Collider col)
     {
-        Transform t = col.transform;
-        while (t != null)
+        if (!col) return false;
+
+        if (debugZoneDetection)
+            Debug.Log($"[Dragon] 태그 체크 중: {col.name}, 태그: '{col.tag}', 찾는 태그: '{attackZoneTag}'");
+
+        // 직접 태그 확인
+        if (col.CompareTag(attackZoneTag))
         {
-            if (t.CompareTag(attackZoneTag)) return true;
-            t = t.parent;
+            if (debugZoneDetection)
+                Debug.Log($"[Dragon] ★ {col.name}이 AttackZone 태그를 가지고 있음!");
+            return true;
         }
+
+        // 부모 오브젝트들도 확인
+        Transform current = col.transform.parent;
+        int parentLevel = 1;
+        while (current != null && parentLevel <= 5) // 최대 5단계까지만 확인
+        {
+            if (debugZoneDetection)
+                Debug.Log($"[Dragon] 부모 {parentLevel}단계 체크: {current.name}, 태그: '{current.tag}'");
+                
+            if (current.CompareTag(attackZoneTag))
+            {
+                if (debugZoneDetection)
+                    Debug.Log($"[Dragon] ★ {current.name} (부모 {parentLevel}단계)이 AttackZone 태그를 가지고 있음!");
+                return true;
+            }
+            current = current.parent;
+            parentLevel++;
+        }
+
         return false;
     }
 
     void ResolvePlayer()
     {
+        // VR Transform이 직접 지정되어 있다면 그것을 사용
+        if (vrPlayerTransform != null)
+        {
+            player = vrPlayerTransform;
+            if (debugZoneDetection)
+                Debug.Log($"[Dragon] VR 플레이어 Transform 사용: {player.name}");
+            return;
+        }
+
+        // 태그로 찾기
         var go = GameObject.FindGameObjectWithTag(playerTag);
         player = go ? go.transform : null;
+        
+        if (debugZoneDetection)
+        {
+            if (player)
+            {
+                Debug.Log($"[Dragon] 태그로 플레이어 찾음: {player.name}");
+                
+                // VR 관련 컴포넌트들 찾기 시도
+                var xrOrigin = FindObjectOfType<Unity.XR.CoreUtils.XROrigin>();
+                if (xrOrigin != null)
+                {
+                    Debug.Log($"[Dragon] XR Origin 발견: {xrOrigin.name} at {xrOrigin.transform.position}");
+                }
+                
+                var camera = Camera.main;
+                if (camera != null)
+                {
+                    Debug.Log($"[Dragon] Main Camera 위치: {camera.transform.position}");
+                }
+            }
+            else
+                Debug.LogWarning($"[Dragon] '{playerTag}' 태그를 가진 플레이어를 찾을 수 없습니다!");
+        }
     }
 
     // ===== 상태 재생 & 스킬 스폰 =====
@@ -287,4 +410,33 @@ public class DragonAnimationDirector : MonoBehaviour
 
     void OnDisable()  { StopActiveSkillFX(); }
     void OnDestroy()  { StopActiveSkillFX(); }
+
+    // ===== 디버깅용 기즈모 =====
+    void OnDrawGizmosSelected()
+    {
+        if (!player) return;
+
+        // VR의 경우 바닥 기준 위치 계산
+        Vector3 checkPosition = player.position;
+        if (useGroundPosition)
+        {
+            checkPosition.y = 0f;
+        }
+
+        // 플레이어 주변 감지 범위 표시
+        Gizmos.color = combatStarted ? Color.red : Color.yellow;
+        Gizmos.DrawWireSphere(checkPosition, zoneOverlapRadius);
+
+        // 원본 플레이어 위치도 표시 (파란색)
+        Gizmos.color = Color.blue;
+        Gizmos.DrawWireCube(player.position, Vector3.one * 0.2f);
+
+        // 현재 감지된 AttackZone들 표시
+        Gizmos.color = Color.green;
+        foreach (var zone in insideZones)
+        {
+            if (zone)
+                Gizmos.DrawWireCube(zone.bounds.center, zone.bounds.size);
+        }
+    }
 }
