@@ -41,7 +41,6 @@ GameObject:
   m_Component:
   - component: {fileID: 9202350820092139407}
   - component: {fileID: 6874677150173285437}
-  - component: {fileID: 2051455112960095777}
   m_Layer: 0
   m_Name: Dragon
   m_TagString: Untagged
@@ -87,40 +86,6 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!114 &2051455112960095777
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6337506465885013590}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b6a36b1a492bd441abf67c1e9c1a157c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  animator: {fileID: 6874677150173285437}
-  mouthSocket: {fileID: 1308215036573533571}
-  playerTag: Player
-  attackZoneTag: AttackZone
-  fireSkillPrefab: {fileID: 100002, guid: d9ee3bc9832154740a632e73487486f5, type: 3}
-  fireeeeSkillPrefab: {fileID: 100000, guid: 74a5941f861bf354a9034d6f8aefd4ef, type: 3}
-  attachSkillToMouth: 1
-  fireSkillLifetime: 1.5
-  fireeeeSkillLifetime: 2.5
-  skillEulerOffset: {x: 0, y: 0, z: 0}
-  zoneOverlapRadius: 0.35
-  zoneScanInterval: 0.1
-  delayedSequenceAfter: 20
-  crossFade: 0.12
-  idleGroundDelay: {x: 0.6, y: 1.2}
-  idleAirDelay: {x: 0.6, y: 1.2}
-  takeOffLen: 1.1
-  landLen: 1
-  attackLenGround: 0.9
-  attackLenAir: 1.1
-  hurtLenAir: 0.6
-  dieLenDefault: 1
 --- !u!1001 &5482907614558995371
 PrefabInstance:
   m_ObjectHideFlags: 0

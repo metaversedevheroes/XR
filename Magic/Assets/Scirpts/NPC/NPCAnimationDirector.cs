@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections;
 
-// NPCAnimationDirector — 드래곤 사망 연동 + 콤보/단독 VFX + 단독 1.7초 지연 최종본
+[DisallowMultipleComponent]
 public class NPCAnimationDirector : MonoBehaviour
 {
     [Header("Animation Settings")]
@@ -13,12 +13,12 @@ public class NPCAnimationDirector : MonoBehaviour
     public string walkState = "Walk";
     public string talkState = "Talk";
     public string handUpState = "Hand Up";          // 콤보 1단
-    public string handAttackState = "Hand Attack";  // 콤보 2단(여기서 콤보 VFX 발생)
-    public string handsAttackState = "Hands Attack";// 단독(여기서 단독 VFX, 지연 발생)
+    public string handAttackState = "Hand Attack";  // 콤보 2단(VFX)
+    public string handsAttackState = "Hands Attack";// 단독(VFX, 지연)
 
     [Header("Attack Settings")]
-    public float attackStartDelay = 3f;
-    public float attackInterval = 2f;
+    public float attackStartDelay = 3f;              // 공격 시작 지연
+    public float attackInterval = 2f;                // 공격 간격
     public bool randomizeAttack = true;
     [Range(0f, 1f)] public float comboProbability = 0.5f;
 
@@ -28,28 +28,40 @@ public class NPCAnimationDirector : MonoBehaviour
     public float handsAttackLen = 2f;
 
     [Header("Skill VFX (인스펙터 연결)")]
-    public Transform vfxSocket;               // 손/가슴 등 기준점
-    public bool attachVfxToSocket = true;     // true면 소켓에 붙어서(Local) 따라감
+    public Transform vfxSocket;                      // 손/가슴 등 기준점
+    public bool attachVfxToSocket = true;            // 소켓에 붙여(Local) 이동
     public Vector3 vfxEulerOffset = Vector3.zero;
-
-    [Tooltip("콤보(Hand Attack 시점) VFX 프리팹")]
     public GameObject comboVfxPrefab;
-    public float comboVfxLifetime = 1.2f;     // 0이면 지속 → 수동정리
-
-    [Tooltip("단독(Hands Attack 시점) VFX 프리팹")]
+    public float comboVfxLifetime = 1.2f;            // 0이면 지속(수동정리)
     public GameObject singleVfxPrefab;
-    public float singleVfxLifetime = 1.2f;    // 0이면 지속 → 수동정리
-
+    public float singleVfxLifetime = 1.2f;           // 0이면 지속(수동정리)
     [Tooltip("단독 스킬 애니메이션 시작 후 VFX 지연(초)")]
-    public float singleVfxDelay = 1.7f;       // ★ 요청 반영: 기본 1.7초
+    public float singleVfxDelay = 1.7f;
+
+    [Header("Attack Zone (인스펙터에서 '콜라이더' 직접 드래그)")]
+    public string playerTag = "Player";              // 플레이어 태그
+    [Tooltip("AttackZone 태그가 설정된 '트리거 콜라이더'를 그대로 드래그해서 넣으세요. (여러 개 가능)")]
+    public Collider[] attackZoneColliders;
+    public bool requireAttackZoneTag = true;         // AttackZone 태그 권장
+    public bool forceIsTrigger = true;               // 자동으로 IsTrigger 켬
+    public bool autoAddKinematicRb = true;           // 트리거 이벤트 보장(kinematic RB 추가)
+
+    [Header("Zone Robustness")]
+    [Tooltip("Exit가 잠깐 들어와도 '그 시간 동안은 안 나간 걸로' 처리")]
+    public float exitGraceTime = 0.5f;
+    public bool debugLogs = false;
 
     // 상태
     private bool isWalking = false;
     private bool isTalking = false;
-    private bool isInAttackZone = false;
     private bool isAttacking = false;
-    private int attackCounter = 0;
     private bool dragonDefeated = false;
+    private int attackCounter = 0;   // ★ 누락된 카운터 추가
+
+    // 어택존 유지 로직
+    private int zoneOverlapCount = 0;        // 중첩 카운트
+    private bool isInAttackZone = false;     // 논리적 상태
+    private Coroutine exitGraceCo = null;    // 그레이스 타이머
 
     // 코루틴
     private Coroutine attackCoroutine;
@@ -59,15 +71,8 @@ public class NPCAnimationDirector : MonoBehaviour
     private GameObject activeComboVfx;
     private GameObject activeSingleVfx;
 
-    void OnEnable()
-    {
-        BossMonster.OnBossDefeated += HandleDragonDefeated; // 드래곤 사망 이벤트 구독
-    }
-
-    void OnDisable()
-    {
-        BossMonster.OnBossDefeated -= HandleDragonDefeated;
-    }
+    void OnEnable()  { BossMonster.OnBossDefeated += HandleDragonDefeated; }
+    void OnDisable() { BossMonster.OnBossDefeated -= HandleDragonDefeated; }
 
     void Start()
     {
@@ -81,27 +86,24 @@ public class NPCAnimationDirector : MonoBehaviour
         if (!vfxSocket) vfxSocket = transform;
 
         PlayAnimation(idleState);
+        WireAttackZones(); // 인스펙터의 트리거 콜라이더에 훅 연결
     }
 
-    /// <summary>드래곤이 죽었을 때 호출(이벤트로 자동 수신)</summary>
+    // ===== 드래곤 사망 시 NPC 리셋 =====
     public void HandleDragonDefeated()
     {
         if (dragonDefeated) return;
         dragonDefeated = true;
 
-        if (attackCoroutine != null) { StopCoroutine(attackCoroutine); attackCoroutine = null; }
-        if (talkCoroutine   != null) { StopCoroutine(talkCoroutine);   talkCoroutine   = null; }
-
-        isInAttackZone = false;
-        isAttacking = false;
-        isTalking = false;
+        StopAttackLoop();
+        isTalking = isAttacking = false;
         isWalking = false;
 
         StopAllSkillVfx();
         PlayAnimation(idleState);
     }
 
-    // === 외부 제어 API ===
+    // ===== 외부 제어(걷기/말하기) =====
     public void SetWalking(bool walking)
     {
         if (dragonDefeated) return;
@@ -116,27 +118,66 @@ public class NPCAnimationDirector : MonoBehaviour
         talkCoroutine = StartCoroutine(TalkSequence(duration));
     }
 
-    public void EnterAttackZone()
+    // ===== AttackZone 진입/이탈(훅에서 자동 호출) =====
+    public void OnAttackZoneEnter(Collider other)
     {
-        if (dragonDefeated) return;
-        isInAttackZone = true;
-        if (attackCoroutine == null)
+        if (!other || !other.CompareTag(playerTag) || dragonDefeated) return;
+
+        zoneOverlapCount++;
+        if (debugLogs) Debug.Log($"[NPC] Zone Enter by {other.name} | count = {zoneOverlapCount}");
+
+        if (exitGraceCo != null) { StopCoroutine(exitGraceCo); exitGraceCo = null; }
+
+        if (!isInAttackZone)
+        {
+            isInAttackZone = true;
+            StartAttackLoopIfNeeded();
+        }
+    }
+
+    public void OnAttackZoneExit(Collider other)
+    {
+        if (!other || !other.CompareTag(playerTag) || dragonDefeated) return;
+
+        zoneOverlapCount = Mathf.Max(0, zoneOverlapCount - 1);
+        if (debugLogs) Debug.Log($"[NPC] Zone Exit by {other.name} | count = {zoneOverlapCount}");
+
+        if (zoneOverlapCount == 0 && exitGraceCo == null)
+            exitGraceCo = StartCoroutine(ExitGraceTimer());
+    }
+
+    IEnumerator ExitGraceTimer()
+    {
+        if (debugLogs) Debug.Log($"[NPC] Exit grace start {exitGraceTime}s");
+        yield return new WaitForSeconds(exitGraceTime);
+        exitGraceCo = null;
+
+        if (zoneOverlapCount == 0)
+        {
+            isInAttackZone = false;
+            StopAttackLoop();
+            if (!isAttacking) UpdateMovementAnimation();
+            StopAllSkillVfx();
+            if (debugLogs) Debug.Log("[NPC] Zone considered left after grace");
+        }
+    }
+
+    void StartAttackLoopIfNeeded()
+    {
+        if (attackCoroutine == null && !dragonDefeated)
             attackCoroutine = StartCoroutine(AttackLoop());
     }
 
-    public void ExitAttackZone()
+    void StopAttackLoop()
     {
-        isInAttackZone = false;
         if (attackCoroutine != null)
         {
             StopCoroutine(attackCoroutine);
             attackCoroutine = null;
         }
-        if (!isAttacking) UpdateMovementAnimation();
-        StopAllSkillVfx();
     }
 
-    // === 내부 로직 ===
+    // ===== 내부 로직 =====
     private void UpdateMovementAnimation()
     {
         if (isTalking || isAttacking) return;
@@ -159,30 +200,32 @@ public class NPCAnimationDirector : MonoBehaviour
         talkCoroutine = null;
     }
 
+    private bool InZone() => isInAttackZone || zoneOverlapCount > 0 || exitGraceCo != null;
+
     private IEnumerator AttackLoop()
     {
-        // 첫 딜레이
+        // 첫 진입 지연
         float waited = 0f;
-        while (isInAttackZone && !dragonDefeated && waited < attackStartDelay)
+        while (InZone() && !dragonDefeated && waited < attackStartDelay)
         {
             waited += Time.deltaTime;
             yield return null;
         }
-        if (!isInAttackZone || dragonDefeated) { attackCoroutine = null; yield break; }
+        if (!InZone() || dragonDefeated) { attackCoroutine = null; yield break; }
 
-        while (isInAttackZone && !dragonDefeated)
+        while (InZone() && !dragonDefeated)
         {
-            // 대화 중 대기
-            while (isTalking && isInAttackZone && !dragonDefeated)
+            // 대화 중엔 대기
+            while (isTalking && InZone() && !dragonDefeated)
                 yield return null;
 
-            if (!isInAttackZone || dragonDefeated) break;
+            if (!InZone() || dragonDefeated) break;
 
             yield return StartCoroutine(ExecuteAttack());
 
             // 쿨타임
             float t = 0f;
-            while (t < attackInterval && isInAttackZone && !dragonDefeated)
+            while (t < attackInterval && InZone() && !dragonDefeated)
             {
                 t += Time.deltaTime;
                 yield return null;
@@ -194,69 +237,74 @@ public class NPCAnimationDirector : MonoBehaviour
     private IEnumerator ExecuteAttack()
     {
         isAttacking = true;
-        attackCounter++;
+        int currentIndex = ++attackCounter;
 
         bool useCombo = randomizeAttack ? (Random.value < comboProbability) : true;
 
         if (useCombo)
         {
-            Debug.Log($"스킬 {attackCounter} — 콤보 (Hand Up → Hand Attack)");
+            if (debugLogs) Debug.Log($"[NPC] 스킬 {currentIndex} — 콤보 (Hand Up → Hand Attack)");
 
             // 1) Hand Up
             PlayAnimation(handUpState);
-            yield return new WaitForSeconds(handUpLen);
-
-            // 2) Hand Attack + 콤보 VFX
-            if (isInAttackZone && !dragonDefeated)
-            {
-                PlayAnimation(handAttackState);
-                SpawnComboVfx(); // 콤보 VFX는 2단계에서 즉시
-                yield return new WaitForSeconds(handAttackLen);
-            }
-        }
-        else
-        {
-            Debug.Log($"스킬 {attackCounter} — 단독 (Hands Attack)");
-
-            // 단독 애니 시작
-            PlayAnimation(handsAttackState);
-
-            // ★ 단독 VFX 지연: singleVfxDelay(기본 1.7초)
             float t = 0f;
-            while (t < singleVfxDelay && isInAttackZone && !dragonDefeated)
+            while (t < handUpLen && InZone() && !dragonDefeated)
             {
                 t += Time.deltaTime;
                 yield return null;
             }
 
-            // 아직 존 안이고 살아있으면 VFX 발사
-            if (isInAttackZone && !dragonDefeated)
-                SpawnSingleVfx();
-
-            // 애니메이션 잔여 구간 대기
-            float remain = Mathf.Max(0f, handsAttackLen - singleVfxDelay);
-            if (remain > 0f)
+            // 2) Hand Attack + 콤보 VFX (존이 잠깐 끊겨도 그레이스 동안 이어짐)
+            if (InZone() && !dragonDefeated)
             {
-                float r = 0f;
-                while (r < remain && isInAttackZone && !dragonDefeated)
+                PlayAnimation(handAttackState);
+                SpawnComboVfx();
+                t = 0f;
+                while (t < handAttackLen && InZone() && !dragonDefeated)
                 {
-                    r += Time.deltaTime;
+                    t += Time.deltaTime;
                     yield return null;
                 }
+            }
+        }
+        else
+        {
+            if (debugLogs) Debug.Log($"[NPC] 스킬 {currentIndex} — 단독 (Hands Attack)");
+
+            // 단독 애니 시작
+            PlayAnimation(handsAttackState);
+
+            // 단독 VFX 지연 발사
+            float t = 0f;
+            while (t < singleVfxDelay && InZone() && !dragonDefeated)
+            {
+                t += Time.deltaTime;
+                yield return null;
+            }
+
+            if (InZone() && !dragonDefeated)
+                SpawnSingleVfx();
+
+            // 애니 잔여 구간
+            float remain = Mathf.Max(0f, handsAttackLen - singleVfxDelay);
+            t = 0f;
+            while (t < remain && InZone() && !dragonDefeated)
+            {
+                t += Time.deltaTime;
+                yield return null;
             }
         }
 
         isAttacking = false;
 
-        if (isInAttackZone && !dragonDefeated)
+        if (InZone() && !dragonDefeated)
             UpdateMovementAnimation();
     }
 
-    // === VFX 스폰/정리 ===
+    // ===== VFX =====
     void SpawnComboVfx()
     {
         if (!comboVfxPrefab || !vfxSocket) return;
-
         if (comboVfxLifetime <= 0f) StopComboVfx();
 
         var go = Instantiate(comboVfxPrefab);
@@ -279,7 +327,6 @@ public class NPCAnimationDirector : MonoBehaviour
     void SpawnSingleVfx()
     {
         if (!singleVfxPrefab || !vfxSocket) return;
-
         if (singleVfxLifetime <= 0f) StopSingleVfx();
 
         var go = Instantiate(singleVfxPrefab);
@@ -321,5 +368,74 @@ public class NPCAnimationDirector : MonoBehaviour
     {
         StopComboVfx();
         StopSingleVfx();
+    }
+
+    // ===== AttackZone 콜라이더 훅 연결 =====
+    void WireAttackZones()
+    {
+        if (attackZoneColliders == null || attackZoneColliders.Length == 0)
+        {
+            Debug.LogWarning("[NPC] AttackZoneColliders 비어있습니다. 인스펙터에서 트리거 콜라이더를 드래그하세요.");
+            return;
+        }
+
+        foreach (var col in attackZoneColliders)
+        {
+            if (!col)
+            {
+                Debug.LogWarning("[NPC] AttackZoneColliders에 빈 슬롯이 있습니다.");
+                continue;
+            }
+
+            if (requireAttackZoneTag && !col.gameObject.CompareTag("AttackZone"))
+                Debug.LogWarning($"[NPC] '{col.gameObject.name}'는 AttackZone 태그가 아닙니다. (동작은 가능)");
+
+            if (forceIsTrigger) col.isTrigger = true;
+
+            if (autoAddKinematicRb)
+            {
+                var rb = col.GetComponent<Rigidbody>();
+                if (!rb)
+                {
+                    rb = col.gameObject.AddComponent<Rigidbody>();
+                    rb.isKinematic = true;
+                    rb.useGravity = false;
+                }
+            }
+
+            var hook = col.GetComponent<NPCAttackZoneHook>();
+            if (!hook) hook = col.gameObject.AddComponent<NPCAttackZoneHook>();
+            hook.Init(this, playerTag);
+        }
+    }
+}
+
+/* 숨김용 훅 — 인스펙터에서 지정한 트리거에 자동 부착 */
+[AddComponentMenu(""), DisallowMultipleComponent]
+public class NPCAttackZoneHook : MonoBehaviour
+{
+    private NPCAnimationDirector owner;
+    private string playerTag;
+
+    public void Init(NPCAnimationDirector o, string tagToUse)
+    {
+        owner = o;
+        playerTag = tagToUse;
+        var col = GetComponent<Collider>();
+        if (col) col.isTrigger = true;
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (!owner || !owner.enabled) return;
+        if (other && other.CompareTag(playerTag))
+            owner.OnAttackZoneEnter(other);
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (!owner || !owner.enabled) return;
+        if (other && other.CompareTag(playerTag))
+            owner.OnAttackZoneExit(other);
     }
 }
