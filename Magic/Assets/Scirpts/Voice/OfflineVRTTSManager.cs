@@ -9,6 +9,8 @@ using UnityEngine.Android;
 
 public class OfflineVRTTSManager : MonoBehaviour
 {
+    private const float maxSpeechDuration = 8f;
+    
     [Header("TTS Settings")]
     [SerializeField] private bool initializeOnStart = true;
     [SerializeField] private bool fallbackToUnityAudio = true;
