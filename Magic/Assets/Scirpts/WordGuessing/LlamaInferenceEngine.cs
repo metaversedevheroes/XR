@@ -39,6 +39,7 @@ public class LlamaInferenceEngine : MonoBehaviour
     private Dictionary<string, string> responseCache;
     private Queue<InferenceRequest> requestQueue;
     private bool isProcessing = false;
+    private Coroutine requestProcessorCoroutine;
     
     private class InferenceRequest
     {
@@ -95,7 +96,7 @@ public class LlamaInferenceEngine : MonoBehaviour
             }
             
             isInitialized = true;
-            StartCoroutine(ProcessRequestQueue());
+            requestProcessorCoroutine = StartCoroutine(ProcessRequestQueue());
             
             UnityEngine.Debug.Log("[LlamaEngine] Llama engine initialized successfully");
             return true;
@@ -221,7 +222,7 @@ public class LlamaInferenceEngine : MonoBehaviour
     
     private IEnumerator ProcessRequestQueue()
     {
-        while (isInitialized)
+        while (isInitialized && enabled && this != null)
         {
             if (requestQueue.Count > 0 && !isProcessing)
             {
@@ -231,8 +232,10 @@ public class LlamaInferenceEngine : MonoBehaviour
                 StartCoroutine(ProcessSingleRequest(request));
             }
             
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSeconds(0.5f);
         }
+        
+        UnityEngine.Debug.Log("[LlamaEngine] ProcessRequestQueue loop ended cleanly");
     }
     
     private IEnumerator ProcessSingleRequest(InferenceRequest request)
@@ -256,7 +259,10 @@ public class LlamaInferenceEngine : MonoBehaviour
             response = GetFallbackResponse(request.prompt);
         }
         
-        request.taskCompletionSource.SetResult(response);
+        if (request.taskCompletionSource != null && !request.taskCompletionSource.Task.IsCompleted)
+        {
+            request.taskCompletionSource.SetResult(response);
+        }
         isProcessing = false;
     }
     
@@ -412,7 +418,27 @@ public class LlamaInferenceEngine : MonoBehaviour
         UnityEngine.Debug.Log("[LlamaEngine] Cleaning up inference engine...");
         
         isInitialized = false;
-        responseCache?.Clear();
+        
+        // Stop request processor coroutine
+        if (requestProcessorCoroutine != null)
+        {
+            try
+            {
+                StopCoroutine(requestProcessorCoroutine);
+                requestProcessorCoroutine = null;
+            }
+            catch (Exception e)
+            {
+                UnityEngine.Debug.Log($"[LlamaEngine] Coroutine cleanup warning: {e.Message}");
+            }
+        }
+        
+        // Clear cache
+        if (responseCache != null)
+        {
+            responseCache.Clear();
+            responseCache = null;
+        }
         
         // Cancel pending requests gracefully
         if (requestQueue != null)
@@ -435,11 +461,17 @@ public class LlamaInferenceEngine : MonoBehaviour
                 }
             }
             
+            requestQueue = null;
+            
             if (canceledCount > 0)
             {
                 UnityEngine.Debug.Log($"[LlamaEngine] Gracefully handled {canceledCount} pending requests");
             }
         }
+        
+        // Force garbage collection
+        System.GC.Collect();
+        System.GC.WaitForPendingFinalizers();
         
         UnityEngine.Debug.Log("[LlamaEngine] Cleanup complete - no more errors expected");
     }

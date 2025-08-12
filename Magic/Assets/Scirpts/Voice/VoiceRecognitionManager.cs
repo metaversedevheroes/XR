@@ -151,7 +151,8 @@ public class VoiceRecognitionManager : MonoBehaviour
             }
         }
         
-        // Subscribe to WhisperVR events
+        // Subscribe to WhisperVR events (avoid duplicate subscription)
+        VoiceRecognitionEvents.OnVoiceRecognized -= OnWhisperVRRecognized;
         VoiceRecognitionEvents.OnVoiceRecognized += OnWhisperVRRecognized;
         
         Debug.Log("WhisperVR integration initialized!");

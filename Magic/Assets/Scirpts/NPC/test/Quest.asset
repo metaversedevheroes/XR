@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27131a62e83cc4ca6afac03e84f04255, type: 3}
+  m_Name: Quest
+  m_EditorClassIdentifier: 
+  quest_id: 1
+  title: "\uD29C\uD1A0\uB9AC\uC5BC"
+  description: "\uD29C\uD1A0\uB9AC\uC5BC \uC785\uB2C8\uB2E4,"
+  required_level: 0
+  reward_xp: 0
+  reward_item: "\uC5C6\uC5B4\uC6A9"
+  is_timed: 0
+  time_limit_sec: 0
+  quest_type: 0
+  linked_npc: {fileID: 11400000, guid: cf4509281707a40d7b964436f509b74d, type: 2}
+  is_step_by_step: 1
+  steps:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}

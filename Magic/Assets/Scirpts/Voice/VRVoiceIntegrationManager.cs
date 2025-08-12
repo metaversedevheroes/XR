@@ -31,7 +31,6 @@ public class VRVoiceIntegrationManager : MonoBehaviour
     private WhisperVRManager whisperManager;
     private OfflineVRTTSManager ttsManager;
     private VoiceRecognitionManager voiceManager;
-    private VoiceInputTester inputTester;
     
     // State management
     private bool isSystemReady = false;
@@ -187,17 +186,14 @@ public class VRVoiceIntegrationManager : MonoBehaviour
     {
         if (!enableFallbackInput) yield break;
         
-        inputTester = FindFirstObjectByType<VoiceInputTester>();
-        if (inputTester == null && enableKeyboardFallback)
+        if (enableKeyboardFallback)
         {
-            GameObject inputObj = new GameObject("VoiceInputTester");
-            inputTester = inputObj.AddComponent<VoiceInputTester>();
+            if (enableDebugLog) Debug.Log("[VRVoiceIntegration] Keyboard fallback enabled");
         }
         
         yield return new WaitForSeconds(0.5f);
         
-        if (enableDebugLog)
-            Debug.Log("[VRVoiceIntegration] Fallback input ready");
+        if (enableDebugLog) Debug.Log("[VRVoiceIntegration] Fallback input ready");
     }
     
     private void SetupVRInputActions()

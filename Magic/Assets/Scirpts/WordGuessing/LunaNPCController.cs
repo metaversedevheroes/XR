@@ -411,11 +411,13 @@ public class LunaNPCController : MonoBehaviour
     
     private IEnumerator ThinkingAnimation()
     {
-        while (state.isThinking)
+        while (state.isThinking && enabled && this != null)
         {
             if (debugMode) Debug.Log("[Luna] Luna is thinking...");
             yield return new WaitForSeconds(0.5f);
         }
+        
+        if (debugMode) Debug.Log("[Luna] Thinking animation stopped");
     }
     
     public void UpdateDifficulty(DifficultyLevel newLevel)
@@ -448,9 +450,43 @@ public class LunaNPCController : MonoBehaviour
     
     private void OnDestroy()
     {
+        Debug.Log("[Luna] OnDestroy called - cleaning up");
+        
+        // Stop thinking animation
+        if (thinkingCoroutine != null)
+        {
+            try
+            {
+                StopCoroutine(thinkingCoroutine);
+                thinkingCoroutine = null;
+            }
+            catch (Exception e)
+            {
+                Debug.Log($"[Luna] Coroutine cleanup warning: {e.Message}");
+            }
+        }
+        
+        // Cleanup inference engine
         if (inferenceEngine != null)
         {
-            inferenceEngine.Cleanup();
+            try
+            {
+                inferenceEngine.Cleanup();
+            }
+            catch (Exception e)
+            {
+                Debug.Log($"[Luna] Cleanup warning (not critical): {e.Message}");
+            }
         }
+        
+        // Clear state
+        state.isReady = false;
+        state.isThinking = false;
+        
+        // Force garbage collection
+        System.GC.Collect();
+        System.GC.WaitForPendingFinalizers();
+        
+        Debug.Log("[Luna] Cleanup complete");
     }
 }

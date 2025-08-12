@@ -629,20 +629,24 @@ public class SinglePlayerWordGuessingManager : MonoBehaviour
     
     private void OnDestroy()
     {
-        // Clean up event listeners
-        if (lunaController != null)
+        // Stop game loop coroutine first
+        if (gameLoopCoroutine != null)
         {
-            LunaNPCController.OnLunaResponse -= HandleLunaResponse;
-            LunaNPCController.OnLunaWordSelected -= HandleLunaWordSelection;
-            LunaNPCController.OnLunaStateChanged -= HandleLunaStateChanged;
+            StopCoroutine(gameLoopCoroutine);
+            gameLoopCoroutine = null;
         }
+        
+        // Clean up event listeners
+        LunaNPCController.OnLunaResponse -= HandleLunaResponse;
+        LunaNPCController.OnLunaWordSelected -= HandleLunaWordSelection;
+        LunaNPCController.OnLunaStateChanged -= HandleLunaStateChanged;
         
         // Clean up voice recognition events
         VoiceRecognitionEvents.OnVoiceRecognized -= HandleVoiceRecognized;
         
-        if (voiceRecognition != null && debugMode)
-        {
-            Debug.Log("[SinglePlayerWG] Voice recognition cleanup completed");
-        }
+        // End game to ensure clean state
+        gameState.isGameActive = false;
+        
+        if (debugMode) Debug.Log("[SinglePlayerWG] SinglePlayerWordGuessingManager cleaned up");
     }
 }
