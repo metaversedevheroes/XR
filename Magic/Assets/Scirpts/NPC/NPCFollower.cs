@@ -1,123 +1,338 @@
-// NPCFollower.cs (Anchor + Ground Snap 지원)
 using UnityEngine;
-using UnityEngine.AI;
 
 public class NPCFollower : MonoBehaviour
 {
-    [Header("Target")]
-    public Transform target;              // 기본 타깃(없으면 동작X)
-    [Tooltip("타깃의 특정 지점을 기준으로 따라가고 싶으면 여기에 지정(예: Player/Anchor)")]
-    public Transform anchor;              // 있으면 anchor 기준, 없으면 target 기준
-
-    [Tooltip("+X=오른쪽, +Z=앞. 앵커(또는 타깃) 로컬 기준 오프셋")]
-    public Vector3 localOffset = new Vector3(0.7f, 0f, 1.2f);
-
-    [Header("Separation")]
-    public float minSeparationFromTarget = 0.9f;
-    public float stopDistance = 0.25f;
-
-    [Header("Move (non-NavMesh)")]
-    public float followSpeed = 4f;
-    public float smoothTime = 0.15f;
-    public float rotationLerp = 10f;
-
-    [Header("Ground Snap (옵션)")]
-    public bool snapToGround = true;
-    public float groundRayStart = 1.5f;
-    public float groundRayLength = 5f;
-    public LayerMask groundMask = ~0;     // 기본: 전부(필요하면 Ground만 지정)
-
-    NavMeshAgent agent;
-    Vector3 smoothVel;
-
-    void Awake()
+    [Header("Debug")]
+    public bool debugLogs = false;
+    
+    [Header("Target Settings")]
+    public string playerTag = "Player";
+    public string attackZoneTag = "AttackZone";
+    
+    [Header("Follow Settings")]
+    public Vector3 localOffset = new Vector3(0.8f, 0f, 1.2f);
+    public float followSpeed = 5f;
+    public float smoothTime = 0.3f;
+    public float rotationLerp = 5f;
+    public float stopDistance = 0.3f;
+    
+    [Header("Ground Settings")]
+    public bool lockToGround = true;
+    public LayerMask groundMask = 1; // Default layer
+    public float groundProbeStart = 2f;
+    public float groundProbeDistance = 5f;
+    public float groundYOffset = 0f;
+    
+    [Header("Movement Detection")]
+    public float moveStartSpeed = 0.1f;
+    public float moveStopSpeed = 0.05f;
+    public float speedSmoothing = 0.1f;
+    public float settleTime = 0.2f;
+    
+    [Header("Talk Settings")]
+    public GameObject talkTarget;
+    public float talkDuration = 2f;
+    public Camera raycam;
+    public bool keepFacingPlayerAfterTalk = true;
+    public float playerMoveWakeThreshold = 0.5f;
+    
+    [Header("AttackZone Detection")]
+    public float zonesRefreshInterval = 0.1f;
+    public float zoneOverlapRadius = 1f;
+    
+    // Private variables
+    private Transform playerTransform;
+    private Vector3 targetPosition;
+    private Vector3 velocity;
+    private Vector3 lastPosition;
+    private Vector3 lastMoveDirection;
+    private float currentSpeed;
+    private float lastSpeedChangeTime;
+    private bool isWalking = false;
+    
+    // Talk state
+    private bool isTalking = false;
+    private float talkEndTime;
+    private Vector3 playerPositionWhenTalkEnded;
+    private bool shouldFacePlayer = false;
+    
+    // AttackZone detection
+    private bool isInAttackZone = false;
+    private float nextZoneCheckTime;
+    
+    // Animation Director reference
+    private NPCAnimationDirector animationDirector;
+    
+    void Start()
     {
-        agent = GetComponent<NavMeshAgent>();
-        if (agent != null)
+        // Find player
+        GameObject playerObj = GameObject.FindGameObjectWithTag(playerTag);
+        if (playerObj != null)
         {
-            agent.updateRotation = false;
-            agent.stoppingDistance = stopDistance;
+            playerTransform = playerObj.transform;
+        }
+        else
+        {
+            if (debugLogs) Debug.LogError($"Player with tag '{playerTag}' not found!");
+        }
+        
+        // Get camera if not assigned
+        if (raycam == null)
+        {
+            raycam = Camera.main;
+        }
+        
+        // Get animation director
+        animationDirector = GetComponent<NPCAnimationDirector>();
+        if (animationDirector == null)
+        {
+            if (debugLogs) Debug.LogError("NPCAnimationDirector component not found!");
+        }
+        
+        // Initialize position tracking
+        lastPosition = transform.position;
+        lastMoveDirection = transform.forward;
+        
+        // Setup Rigidbody if present
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+            rb.useGravity = false;
+            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         }
     }
-
-    Transform Origin => anchor != null ? anchor : target;
-
-    void OnValidate()
-    {
-        if (stopDistance >= minSeparationFromTarget)
-            stopDistance = Mathf.Max(0.05f, minSeparationFromTarget * 0.7f);
-    }
-
+    
     void Update()
     {
-        if (!Origin) return;
-
-        // 1) 기준(Origin = anchor or target) 로컬 오프셋 → 월드
-        Vector3 desiredPos = Origin.TransformPoint(localOffset);
-
-        // 2) 바닥 스냅(선택)
-        if (snapToGround)
-        {
-            Vector3 rayStart = desiredPos + Vector3.up * groundRayStart;
-            if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, groundRayLength, groundMask, QueryTriggerInteraction.Ignore))
-                desiredPos.y = hit.point.y;
-            else
-                desiredPos.y = Origin.position.y; // 실패 시 원점 높이
-        }
-        else
-        {
-            desiredPos.y = Origin.position.y;
-        }
-
-        // 3) 최소거리 보장(겹침 방지)
-        Vector3 away = desiredPos - Origin.position; away.y = 0f;
-        float dist = away.magnitude;
-        if (dist > 1e-4f && dist < minSeparationFromTarget)
-            desiredPos = Origin.position + away.normalized * minSeparationFromTarget;
-
-        Vector3 toMe = transform.position - Origin.position; toMe.y = 0f;
-        float cur = toMe.magnitude;
-        if (cur > 1e-4f && cur < minSeparationFromTarget)
-            desiredPos += toMe.normalized * (minSeparationFromTarget - cur) * 0.6f;
-
-        // 4) 이동
-        if (agent != null && agent.isOnNavMesh)
-        {
-            if (agent.destination != desiredPos) agent.SetDestination(desiredPos);
-        }
-        else
-        {
-            Vector3 to = desiredPos - transform.position;
-            if (to.magnitude > stopDistance)
-                transform.position = Vector3.SmoothDamp(transform.position, desiredPos, ref smoothVel, smoothTime, followSpeed);
-        }
-
-        // 5) 회전: 타깃 전방을 향하게
-        Quaternion look = Quaternion.LookRotation(Vector3.ProjectOnPlane(Origin.forward, Vector3.up), Vector3.up);
-        transform.rotation = Quaternion.Slerp(transform.rotation, look, rotationLerp * Time.deltaTime);
+        if (playerTransform == null) return;
+        
+        HandleTalkInput();
+        UpdateMovement();
+        UpdateRotation();
+        UpdateSpeedDetection();
+        CheckAttackZones();
+        HandleTalkState();
     }
-
-    public void SetTarget(Transform newTarget, Transform newAnchor = null)
+    
+    void HandleTalkInput()
     {
-        target = newTarget;
-        anchor = newAnchor;
-        if (agent != null && agent.isOnNavMesh && target != null)
+        if (Input.GetMouseButtonDown(0) && talkTarget != null && !isTalking)
         {
-            agent.ResetPath();
-            Vector3 p = (anchor ? anchor : target).TransformPoint(localOffset);
-            agent.SetDestination(p);
+            Ray ray = raycam.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+            
+            if (Physics.Raycast(ray, out hit))
+            {
+                if (hit.collider.gameObject == talkTarget)
+                {
+                    StartTalk();
+                }
+            }
         }
     }
-
+    
+    void StartTalk()
+    {
+        if (animationDirector != null)
+        {
+            animationDirector.BeginTalk(talkDuration);
+            isTalking = true;
+            talkEndTime = Time.time + talkDuration;
+            shouldFacePlayer = true;
+            
+            if (debugLogs) Debug.Log("Talk started");
+        }
+    }
+    
+    void HandleTalkState()
+    {
+        if (isTalking && Time.time >= talkEndTime)
+        {
+            isTalking = false;
+            playerPositionWhenTalkEnded = playerTransform.position;
+            
+            if (debugLogs) Debug.Log("Talk ended");
+        }
+        
+        if (shouldFacePlayer && !isTalking && keepFacingPlayerAfterTalk)
+        {
+            float playerMovement = Vector3.Distance(playerTransform.position, playerPositionWhenTalkEnded);
+            if (playerMovement >= playerMoveWakeThreshold)
+            {
+                shouldFacePlayer = false;
+                if (debugLogs) Debug.Log("Player moved, stop facing player");
+            }
+        }
+    }
+    
+    void UpdateMovement()
+    {
+        // Calculate target position (player position + offset)
+        Vector3 playerRight = playerTransform.right;
+        Vector3 playerForward = playerTransform.forward;
+        Vector3 worldOffset = playerRight * localOffset.x + Vector3.up * localOffset.y + playerForward * localOffset.z;
+        targetPosition = playerTransform.position + worldOffset;
+        
+        // Ground snapping
+        if (lockToGround)
+        {
+            Vector3 probeStart = targetPosition + Vector3.up * groundProbeStart;
+            RaycastHit hit;
+            
+            if (Physics.Raycast(probeStart, Vector3.down, out hit, groundProbeDistance, groundMask))
+            {
+                targetPosition.y = hit.point.y + groundYOffset;
+            }
+        }
+        
+        // Smooth movement
+        float distanceToTarget = Vector3.Distance(transform.position, targetPosition);
+        
+        if (distanceToTarget > stopDistance)
+        {
+            transform.position = Vector3.SmoothDamp(transform.position, targetPosition, ref velocity, smoothTime, followSpeed);
+        }
+    }
+    
+    void UpdateRotation()
+    {
+        Vector3 targetDirection;
+        
+        // Determine rotation target
+        if (isTalking || shouldFacePlayer)
+        {
+            targetDirection = (playerTransform.position - transform.position).normalized;
+            targetDirection.y = 0; // Keep horizontal
+        }
+        else if (isWalking)
+        {
+            Vector3 moveDirection = (transform.position - lastPosition).normalized;
+            if (moveDirection.magnitude > 0.01f)
+            {
+                lastMoveDirection = moveDirection;
+            }
+            targetDirection = lastMoveDirection;
+            targetDirection.y = 0;
+        }
+        else
+        {
+            targetDirection = lastMoveDirection;
+        }
+        
+        // Apply rotation
+        if (targetDirection.magnitude > 0.01f)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(targetDirection);
+            transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, rotationLerp * Time.deltaTime);
+        }
+    }
+    
+    void UpdateSpeedDetection()
+    {
+        // Calculate speed
+        Vector3 currentPosition = transform.position;
+        float instantSpeed = Vector3.Distance(currentPosition, lastPosition) / Time.deltaTime;
+        
+        // Smooth speed
+        currentSpeed = Mathf.Lerp(currentSpeed, instantSpeed, speedSmoothing);
+        
+        // State transition with hysteresis
+        bool wasWalking = isWalking;
+        
+        if (!isWalking && currentSpeed >= moveStartSpeed)
+        {
+            if (Time.time - lastSpeedChangeTime >= settleTime)
+            {
+                isWalking = true;
+                lastSpeedChangeTime = Time.time;
+            }
+        }
+        else if (isWalking && currentSpeed <= moveStopSpeed)
+        {
+            if (Time.time - lastSpeedChangeTime >= settleTime)
+            {
+                isWalking = false;
+                lastSpeedChangeTime = Time.time;
+            }
+        }
+        
+        // Notify animation director
+        if (wasWalking != isWalking && animationDirector != null)
+        {
+            animationDirector.SetWalking(isWalking);
+            if (debugLogs) Debug.Log($"Walking state changed: {isWalking}");
+        }
+        
+        lastPosition = currentPosition;
+    }
+    
+    void CheckAttackZones()
+    {
+        if (Time.time < nextZoneCheckTime) return;
+        nextZoneCheckTime = Time.time + zonesRefreshInterval;
+        
+        if (playerTransform == null) return;
+        
+        // Check for AttackZone colliders around player
+        Collider[] colliders = Physics.OverlapSphere(playerTransform.position, zoneOverlapRadius, -1, QueryTriggerInteraction.Collide);
+        
+        bool foundAttackZone = false;
+        
+        foreach (Collider col in colliders)
+        {
+            if (col.CompareTag(attackZoneTag) || (col.transform.parent != null && col.transform.parent.CompareTag(attackZoneTag)))
+            {
+                foundAttackZone = true;
+                break;
+            }
+        }
+        
+        // Handle zone entry/exit
+        if (foundAttackZone && !isInAttackZone)
+        {
+            isInAttackZone = true;
+            Debug.Log("AttackZone 지남!!");
+            
+            if (animationDirector != null)
+            {
+                animationDirector.EnterAttackZone();
+            }
+        }
+        else if (!foundAttackZone && isInAttackZone)
+        {
+            isInAttackZone = false;
+            
+            if (animationDirector != null)
+            {
+                animationDirector.ExitAttackZone();
+            }
+            
+            if (debugLogs) Debug.Log("Exited AttackZone");
+        }
+    }
+    
     void OnDrawGizmosSelected()
     {
-        if (!Origin) return;
-        Gizmos.color = Color.cyan;
-        Vector3 p = Origin.TransformPoint(localOffset);
-        Gizmos.DrawSphere(p, 0.07f);
-        Gizmos.DrawLine(transform.position, p);
-
-        Gizmos.color = new Color(1f, 0.5f, 0f, 0.8f);
-        Gizmos.DrawWireSphere(Origin.position, minSeparationFromTarget);
+        if (playerTransform != null)
+        {
+            // Draw offset position
+            Vector3 playerRight = playerTransform.right;
+            Vector3 playerForward = playerTransform.forward;
+            Vector3 worldOffset = playerRight * localOffset.x + Vector3.up * localOffset.y + playerForward * localOffset.z;
+            Vector3 targetPos = playerTransform.position + worldOffset;
+            
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireSphere(targetPos, 0.5f);
+            Gizmos.DrawLine(playerTransform.position, targetPos);
+            
+            // Draw stop distance
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireSphere(transform.position, stopDistance);
+            
+            // Draw attack zone detection radius around player
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(playerTransform.position, zoneOverlapRadius);
+        }
     }
 }
