@@ -9,6 +9,7 @@ public class InteractTrigger : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         Debug.Log("PYJ_OnTriggerEnter");
+        Debug.Log($"부딪힌 거 {other.gameObject.name}");
         var interactable = other.GetComponent<IInteractable>();
         if (interactable != null)
             OnEnter?.Invoke(interactable);
