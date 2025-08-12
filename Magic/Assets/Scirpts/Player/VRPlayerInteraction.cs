@@ -73,10 +73,16 @@ public class VRPlayerInteraction : MonoBehaviour
         }
     }
 
+    // private void TryHandle(GameObject go) {
+    //     if (!go) return;
+    //     var interactable = go.GetComponentInParent<IInteractable>(); // ← InParent 추천
+    //     if (interactable != null) interactable.Interact();
+    // }
+
     private void TryHandle(GameObject go)
     {
         if (go == null) return;
-
+    
         var interactable = go.GetComponent<IInteractable>();
         if (interactable != null)
         {
