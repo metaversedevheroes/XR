@@ -1,278 +1,290 @@
-// DragonAnimationDirector.cs
-// - Animator State 이름 = 애니메이션 클립 이름과 동일하게 사용
-// - 트리거 콜라이더(변수로 연결)에서 Player 태그 감지 → 시퀀스 시작
-// - 상황 강제/피격/사망, 지상/공중 전환, Idle 텀 포함
-
+// DragonAnimationDirector.cs — 최종본(사망 시 브레스 완전 정지)
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
+[DisallowMultipleComponent]
 public class DragonAnimationDirector : MonoBehaviour
 {
-    public enum Situation { IdleGround, TakeOff, IdleAir, Land, AttackGround, AttackAir, Hurt, Die }
-
     [Header("References")]
-    public Animator animator;           // 드래곤 루트의 Animator (null이면 자동 GetComponent)
-    public Collider aggroTrigger;       // 플레이어 감지용 트리거 콜라이더(자식 오브젝트 등)
-    public string playerTag = "Player"; // 감지할 태그
+    public Animator animator;
+    [Tooltip("입 앞쪽 Empty(자식). 로컬 Z가 바깥을 향하게")]
+    public Transform mouthSocket;
 
-    [Header("선택: 거리 기반 시작(트리거 대신)")]
-    public bool useDistanceAggro = false;
-    public Transform player;            // 거리 방식 쓸 때만 지정
-    public float aggroDistance = 12f;
+    [Header("Tags")]
+    public string playerTag = "Player";
+    public string attackZoneTag = "AttackZone";
 
-    // ====== Animator State 이름(클립 이름과 동일) ======
-    // 지상
+    [Header("Skill Prefabs")]
+    public GameObject fireSkillPrefab;        // "Fire"
+    public GameObject fireeeeSkillPrefab;     // "Fireeee", "Fly Fireeee"
+    public bool attachSkillToMouth = true;    // 소켓에 붙여서 따라감(Local)
+    public float fireSkillLifetime    = 1.5f; // 0이면 자동 파괴 안 함(지속)
+    public float fireeeeSkillLifetime = 2.5f;
+    public Vector3 skillEulerOffset   = Vector3.zero; // 방향 보정
+
+    [Header("AttackZone 감지(존에 스크립트 불필요)")]
+    public float zoneOverlapRadius   = 0.35f;
+    public float zoneScanInterval    = 0.1f;
+    public float delayedSequenceAfter= 20f;   // 진입 후 20초 뒤 사망 시퀀스
+
+    [Header("Animator States(클립명과 동일)")]
     const string G_Idle     = "Idle";
     const string G_Fire     = "Fire";
     const string G_FireLong = "Fireeee";
-    const string G_Hurt     = "Ouch 1";
-
-    // 공중
     const string A_TakeOff  = "Fly UP";
     const string A_Idle     = "Fly Idle";
     const string A_IdleAlt  = "Flying Idle";
     const string A_Land     = "Fly Down";
-    const string A_Fire     = "Fly Fireeee";
+    const string A_FireAir  = "Fly Fireeee";
     const string A_Hurt     = "Fly Ouch";
+    const string A_DieStart = "Fly Die Start";
+    const string A_DieDone  = "Fly Die Done";
 
-    // 사망(공중)
-    static readonly string[] DIE_AIR = { "Fly Die Start", "Fly Die Done" };
-    // 지상 사망 클립이 있다면 여기에 추가
-    static readonly string[] DIE_GROUND = { /* "Die Start", "Die Done" */ };
-
-    [Header("Timing (초) — 애니메이션 실제 길이에 맞게 조절)")]
-    public float crossFade = 0.12f;
+    [Header("Timing (sec)")]
+    public float crossFade       = 0.12f;
     public Vector2 idleGroundDelay = new Vector2(0.6f, 1.2f);
     public Vector2 idleAirDelay    = new Vector2(0.6f, 1.2f);
-    public float takeOffLen        = 1.1f;
-    public float landLen           = 1.0f;
-    public float attackLenGround   = 0.9f;
-    public float attackLenAir      = 1.1f;
-    public float hurtLenGround     = 0.6f;
-    public float hurtLenAir        = 0.6f;
-    public float dieLenDefault     = 1.0f;
+    public float takeOffLen      = 1.1f;
+    public float landLen         = 1.0f;
+    public float attackLenGround = 0.9f;
+    public float attackLenAir    = 1.1f;
+    public float hurtLenAir      = 0.6f;
+    public float dieLenDefault   = 1.0f;
 
-    [Header("Debug (수동 강제 테스트)")]
-    public bool debugControl = false;
-    public Situation debugSituation = Situation.IdleGround;
-
-    bool inAir = false;
+    // --- 내부 상태 ---
+    Transform player;
     bool alive = true;
-    bool engaged = false;   // 시퀀스 시작 여부
-    Coroutine flowCo;
+    bool inAir = false;
 
-    void Reset()
-    {
-        animator = GetComponent<Animator>();
-    }
+    float scanT;
+    readonly HashSet<Collider> insideZones = new();
+    bool combatStarted = false;
+    bool deathScheduled = false;
+    Coroutine attackCo, deathCo;
+
+    // 현재 살아있는 스킬 FX 추적(지속형 강제 종료용)
+    GameObject activeFX;
 
     void Awake()
     {
-        if (animator == null) animator = GetComponent<Animator>();
-
-        // 트리거 콜라이더가 지정되어 있으면, 이벤트 전달자 자동 장착
-        if (aggroTrigger != null)
-        {
-            aggroTrigger.isTrigger = true;
-            var fwd = aggroTrigger.GetComponent<DragonTriggerForwarder>();
-            if (fwd == null) fwd = aggroTrigger.gameObject.AddComponent<DragonTriggerForwarder>();
-            fwd.Init(this, playerTag);
-        }
-    }
-
-    void Start()
-    {
-        Play(G_Idle); // 초기엔 지상 Idle
+        if (!animator) animator = GetComponent<Animator>();
+        if (!mouthSocket) mouthSocket = transform;
+        ResolvePlayer();
+        Play(G_Idle);
     }
 
     void Update()
     {
-        if (!alive) return;
+        if (!alive || combatStarted) return;
 
-        // 수동 디버그
-        if (debugControl)
+        scanT += Time.deltaTime;
+        if (scanT >= zoneScanInterval)
         {
-            ApplySituation(debugSituation);
-            return;
-        }
-
-        // 선택: 거리 기반 자동 시작
-        if (useDistanceAggro && !engaged && player != null)
-        {
-            if (Vector3.Distance(player.position, transform.position) <= aggroDistance)
-                StartAggro();
+            scanT = 0f;
+            if (CheckPlayerEnteredAnyAttackZone())
+                StartCombat();
         }
     }
 
-    // === 트리거로부터 콜백 받는 함수 (Forwarder가 호출) ===
-    public void OnAggroTriggerEnter(Collider other)
+    // ===== Combat Start & Death Schedule =====
+    void StartCombat()
     {
-        Debug.Log("OnAggroTriggerEnter불렸음1");
-        if (!alive || engaged) return;
-        StartAggro();
+        if (combatStarted || !alive) return;
+        combatStarted = true;
+
+        attackCo = StartCoroutine(AttackLoop());
+
+        if (!deathScheduled)
+        {
+            deathScheduled = true;
+            deathCo = StartCoroutine(DelayedFlyHurtDieSequence());
+        }
     }
 
-    // === 외부/트리거에서 호출 ===
-    public void StartAggro()
+    IEnumerator DelayedFlyHurtDieSequence()
     {
-        Debug.Log("StartAggro이번엔 얘가 보임 2");
-        if (engaged || !alive) return;
-        engaged = true;
+        yield return new WaitForSeconds(Mathf.Max(0.01f, delayedSequenceAfter));
 
-        if (flowCo != null) StopCoroutine(flowCo);
-        flowCo = StartCoroutine(EncounterLoop());
-    }
+        // 사망 시퀀스 진입 전 모든 브레스/스킬 FX 강제 종료
+        StopActiveSkillFX();
 
-    public void SetSituation(Situation s)
-    {
-        if (!alive) return;
-        ApplySituation(s);
-    }
+        // 공중으로
+        inAir = true;
+        Play(A_TakeOff);
+        yield return WaitForSeconds(takeOffLen);
 
-    public void TakeDamage()
-    {
-        if (!alive) return;
-        if (flowCo != null) StopCoroutine(flowCo);
+        // 피격
+        Play(A_Hurt);
+        yield return WaitForSeconds(hurtLenAir);
 
-        if (inAir && HasState(A_Hurt)) { Interrupt(A_Hurt); StartCoroutine(ReturnIdleAfter(hurtLenAir)); }
-        else if (!inAir && HasState(G_Hurt)) { Interrupt(G_Hurt); StartCoroutine(ReturnIdleAfter(hurtLenGround)); }
-        else { StartCoroutine(ReturnIdleAfter(0.5f)); }
-    }
+        // 사망
+        StopActiveSkillFX();
+        Play(A_DieStart);
+        yield return WaitForSeconds(dieLenDefault);
 
-    public void Kill()
-    {
-        if (!alive) return;
+        Play(A_DieDone);
+        yield return WaitForSeconds(dieLenDefault);
+
+        // 완전 종료 처리
         alive = false;
-        if (flowCo != null) StopCoroutine(flowCo);
-        StartCoroutine(PlayDieSequence());
+        StopActiveSkillFX();
+        if (attackCo != null) { StopCoroutine(attackCo); attackCo = null; }
     }
 
-    // === 메인 전투 루프(예시 시나리오) ===
-    IEnumerator EncounterLoop()
+    // ===== 공격 루프(단순 예시) =====
+    IEnumerator AttackLoop()
     {
-        Debug.Log("3번출발");
         while (alive)
         {
-            Debug.Log("4번시작");
-            // 지상 대기
-            yield return WaitSeconds(Random.Range(idleGroundDelay.x, idleGroundDelay.y));
+            yield return WaitForSeconds(Random.Range(idleGroundDelay.x, idleGroundDelay.y));
 
-            // 날아오르기
-            Play(A_TakeOff); inAir = true;
-            yield return WaitSeconds(takeOffLen);
+            bool doAir = Random.value < 0.5f;
 
-            // 공중 대기
-            Play(GetAirIdle());
-            yield return WaitSeconds(Random.Range(idleAirDelay.x, idleAirDelay.y));
-
-            // 공중 공격
-            Play(A_Fire);
-            yield return WaitSeconds(attackLenAir);
-
-            // 착지
-            Play(A_Land); inAir = false;
-            yield return WaitSeconds(landLen);
-
-            // 지상 대기
-            Play(G_Idle);
-            yield return WaitSeconds(Random.Range(idleGroundDelay.x, idleGroundDelay.y));
-
-            // 지상 공격 (짧/긴 랜덤)
-            Play(Random.value < 0.5f ? G_Fire : G_FireLong);
-            yield return WaitSeconds(attackLenGround);
+            if (doAir)
+            {
+                inAir = true;
+                Play(A_TakeOff);             yield return WaitForSeconds(takeOffLen);
+                Play(GetAirIdle());          yield return WaitForSeconds(Random.Range(idleAirDelay.x, idleAirDelay.y));
+                Play(A_FireAir);             yield return WaitForSeconds(attackLenAir);
+                Play(A_Land); inAir = false; yield return WaitForSeconds(landLen);
+            }
+            else
+            {
+                Play(Random.value < 0.5f ? G_Fire : G_FireLong);
+                yield return WaitForSeconds(attackLenGround);
+            }
         }
     }
 
-    IEnumerator ReturnIdleAfter(float t)
+    // ===== AttackZone 감지(존에 스크립트 불필요) =====
+    bool CheckPlayerEnteredAnyAttackZone()
     {
-        yield return WaitSeconds(t);
-        Play(inAir ? GetAirIdle() : G_Idle);
+        if (!player) { ResolvePlayer(); if (!player) return false; }
 
-        if (engaged && alive)
+        var hits = Physics.OverlapSphere(player.position, zoneOverlapRadius, ~0, QueryTriggerInteraction.Collide);
+        var nowInside = new HashSet<Collider>();
+        foreach (var c in hits)
         {
-            if (flowCo != null) StopCoroutine(flowCo);
-            flowCo = StartCoroutine(EncounterLoop());
+            if (c && IsAttackZone(c)) nowInside.Add(c);
         }
+
+        bool entered = false;
+        foreach (var z in nowInside)
+            if (!insideZones.Contains(z)) { insideZones.Add(z); entered = true; }
+
+        // exit 정리
+        var remove = new List<Collider>();
+        foreach (var z in insideZones)
+            if (!nowInside.Contains(z)) remove.Add(z);
+        foreach (var z in remove) insideZones.Remove(z);
+
+        return entered;
     }
 
-    IEnumerator PlayDieSequence()
+    bool IsAttackZone(Collider col)
     {
-        var seq = inAir && DIE_AIR.Length > 0 ? DIE_AIR :
-                  (DIE_GROUND.Length > 0 ? DIE_GROUND : DIE_AIR);
-
-        foreach (var s in seq)
+        Transform t = col.transform;
+        while (t != null)
         {
-            if (string.IsNullOrEmpty(s)) continue;
-            Interrupt(s);
-            yield return WaitSeconds(dieLenDefault);
+            if (t.CompareTag(attackZoneTag)) return true;
+            t = t.parent;
         }
-        // Dead 루프가 있으면 여기서 추가 재생
+        return false;
     }
 
-    // === 상태 전환/보조 ===
-    void ApplySituation(Situation s)
+    void ResolvePlayer()
     {
-        switch (s)
-        {
-            case Situation.IdleGround: inAir = false; Play(G_Idle); break;
-            case Situation.TakeOff:    inAir = true;  Play(A_TakeOff); break;
-            case Situation.IdleAir:    inAir = true;  Play(GetAirIdle()); break;
-            case Situation.Land:       inAir = false; Play(A_Land); break;
-            case Situation.AttackGround: inAir = false; Play(Random.value < 0.5f ? G_Fire : G_FireLong); break;
-            case Situation.AttackAir:    inAir = true;  Play(A_Fire); break;
-            case Situation.Hurt: TakeDamage(); break;
-            case Situation.Die:  Kill(); break;
-        }
+        var go = GameObject.FindGameObjectWithTag(playerTag);
+        player = go ? go.transform : null;
+    }
+
+    // ===== 상태 재생 & 스킬 스폰 =====
+    void Play(string state, float fade = -1f)
+    {
+        if (string.IsNullOrEmpty(state) || !animator) return;
+
+        // 불 공격 상태가 아니면, 들어가기 전에 항상 FX 정리
+        if (state != G_Fire && state != G_FireLong && state != A_FireAir)
+            StopActiveSkillFX();
+
+        animator.CrossFadeInFixedTime(state, fade < 0f ? crossFade : fade);
+
+        if (!alive) return; // 사망 중엔 스폰 금지
+        TrySpawnSkillForState(state);
     }
 
     string GetAirIdle()
     {
         if (HasState(A_Idle))    return A_Idle;
         if (HasState(A_IdleAlt)) return A_IdleAlt;
-        return A_Idle; // 기본
+        return A_Idle;
     }
 
-    void Play(string state, float fade = -1f)
+    void TrySpawnSkillForState(string state)
     {
-        if (string.IsNullOrEmpty(state) || animator == null) return;
-        animator.CrossFadeInFixedTime(state, fade < 0 ? crossFade : fade);
+        if (!alive) return;
+
+        if (state == G_Fire)
+        {
+            SpawnSkill(fireSkillPrefab, fireSkillLifetime);
+        }
+        else if (state == G_FireLong || state == A_FireAir)
+        {
+            SpawnSkill(fireeeeSkillPrefab, fireeeeSkillLifetime);
+        }
     }
 
-    void Interrupt(string state)
+    void SpawnSkill(GameObject prefab, float lifetime)
     {
-        if (string.IsNullOrEmpty(state) || animator == null) return;
-        animator.Play(state, 0, 0f);
+        if (!prefab || !mouthSocket || !alive) return;
+
+        // 기존 지속형 FX가 있다면 먼저 정리
+        StopActiveSkillFX();
+
+        var fx = Instantiate(prefab);
+        if (attachSkillToMouth)
+        {
+            fx.transform.SetParent(mouthSocket, worldPositionStays:false);
+            fx.transform.localPosition = Vector3.zero;
+            fx.transform.localRotation = Quaternion.Euler(skillEulerOffset);
+        }
+        else
+        {
+            fx.transform.position = mouthSocket.position;
+            fx.transform.rotation = mouthSocket.rotation * Quaternion.Euler(skillEulerOffset);
+        }
+
+        if (lifetime > 0f)                // 일회성
+        {
+            Destroy(fx, lifetime);
+        }
+        else                               // 지속형 → 추적해 두었다가 강제 종료
+        {
+            activeFX = fx;
+        }
     }
 
-    bool HasState(string state)
+    void StopActiveSkillFX()
     {
-        if (animator == null || string.IsNullOrEmpty(state)) return false;
-        return animator.HasState(0, Animator.StringToHash(state));
+        if (!activeFX) return;
+
+        // 파티클이면 부드럽게 멈춤
+        var ps = activeFX.GetComponent<ParticleSystem>();
+        if (ps) ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+
+        Destroy(activeFX, 1f);
+        activeFX = null;
     }
 
-    WaitForSeconds WaitSeconds(float t) => new WaitForSeconds(Mathf.Max(0.01f, t));
-}
-
-// ===== 트리거 이벤트 전달용 내부 컴포넌트 =====
-// (aggroTrigger에 자동으로 붙여서 Player 진입을 Director에 전달)
-[DisallowMultipleComponent]
-public class DragonTriggerForwarder : MonoBehaviour
-{
-    DragonAnimationDirector director;
-    string playerTag = "Player";
-
-    public void Init(DragonAnimationDirector d, string tagToUse)
+    // ===== 유틸 =====
+    bool HasState(string s)
     {
-        director = d;
-        playerTag = tagToUse;
-        var col = GetComponent<Collider>();
-        if (col) col.isTrigger = true;
+        if (!animator || string.IsNullOrEmpty(s)) return false;
+        return animator.HasState(0, Animator.StringToHash(s));
     }
+    WaitForSeconds WaitForSeconds(float t) => new WaitForSeconds(Mathf.Max(0.01f, t));
 
-    void OnTriggerEnter(Collider other)
-    {
-        //Debug.Log("자봐라잉지금용준비시작~!");
-        if (director && director.enabled && other.CompareTag(playerTag))
-            director.OnAggroTriggerEnter(other);
-    }
+    void OnDisable()  { StopActiveSkillFX(); }
+    void OnDestroy()  { StopActiveSkillFX(); }
 }
